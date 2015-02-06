@@ -19,6 +19,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -32,7 +33,7 @@ public class YamlConfigurableActivity implements Activity {
     private YamlActivityDef yamlActivityDef;
 
     // Since this class services multiple concurrent activities, synchronize each init independently
-    private static Set<String> configuredActivities = new HashSet<>();
+    private static Map<String,ReadyStatements> configuredActivities = new ConcurrentHashMap<>();
 
     private long endCycle, submittedCycle;
     private int pendingRq = 0;
@@ -100,25 +101,25 @@ public class YamlConfigurableActivity implements Activity {
         // To populate the namespace
         context.getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
 
-        if (!configuredActivities.contains(name)) {
+        if (!configuredActivities.containsKey(name)) {
             synchronized (YamlConfigurableActivity.class) {
-                if (!configuredActivities.contains(name)) {
-                    configureActivity(yamlActivityDef, startCycle);
-                    configuredActivities.add(name);
+                if (!configuredActivities.containsKey(name)) {
+                    ReadyStatements rs = configureActivity(yamlActivityDef, startCycle);
+                    configuredActivities.put(name,rs);
                 }
             }
-
         }
+        readyStatements = configuredActivities.get(name);
 
     }
 
-    private void configureActivity(YamlActivityDef yamlActivityDef, long startCycle) {
+    private ReadyStatements configureActivity(YamlActivityDef yamlActivityDef, long startCycle) {
 
         session = context.getSession();
 
         if (context.getConfig().createSchema) {
             createSchema();
-            return;
+            return null;
         }
 
         try {
@@ -140,12 +141,11 @@ public class YamlConfigurableActivity implements Activity {
                 readyStatementList.add(rs);
             }
 
-            readyStatements = new ReadyStatements(readyStatementList).setConsistencyLevel(context.getConfig().defaultConsistencyLevel);
+            return new ReadyStatements(readyStatementList).setConsistencyLevel(context.getConfig().defaultConsistencyLevel);
         } catch (Exception e) {
             instrumentException(e);
             throw new RuntimeException(e);
         }
-
     }
 
     @Override
@@ -179,7 +179,9 @@ public class YamlConfigurableActivity implements Activity {
             try {
 
                 TimedResultSetFuture trsf = new TimedResultSetFuture();
-                trsf.boundStatement = readyStatements.getNext(submittingCycle).bind();
+                ReadyStatement nextStatement = readyStatements.getNext(submittingCycle);
+
+                trsf.boundStatement = nextStatement.bind();
                 trsf.timerContext = timerOps.time();
                 trsf.rsFuture = session.executeAsync(trsf.boundStatement);
                 trsf.tries++;
