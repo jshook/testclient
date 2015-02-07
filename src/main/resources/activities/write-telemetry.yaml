@@ -20,7 +20,7 @@ ddl:
 dml:
  - name: write-telemetry
    cql: |
-     insert into <<KEYSPACE>>.<<TABLE>> (source, epoch_hour, param, ts, data, cycle)
+     insert into <<KEYSPACE>>.<<TABLE>>_telemetry (source, epoch_hour, param, ts, data, cycle)
      values (<<source>>,<<epoch_hour>>,<<param>>,<<ts>>,<<data>>,<<cycle>>);
    bindings:
      source: threadnum
