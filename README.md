@@ -1,6 +1,10 @@
 ## a Cassandra/CQL test client
 
-This client was originally built in order to test loading time series data in bulk. It may end up doing more than that when it grows up, but right now it is still a fledgeling. Read more for details of how it works.
+This was thrown together as a way to quickly get some specific tests running. It is a bit rough around the edges.
+
+Even though the code is not perfect or even pretty in places, It was evident that it might be useful to some. Many users need a starting point for testing application-specific data models with some degree of performance. It is not  a comprehensive testing tool, nor even a feature rich one like the new Cassandra stress tool. It's just a client that can allow users to test application-specific CQL workloads at speed. Sometimes, that's exactly what you need. So it is in that spirit that I share this thing that was supposed to be a quick-n-dirty testing rig.
+
+I will do light maintanaince on it and consider any requests that are submitted. However, this project is not my main focus. Some day, I'd like to release a proper scale testing tool, but this is not that tool. It's just a sapling. Please submit requests via the project page if you need bugs fixed or even small enhancements.
 
 ### Requirements
 
