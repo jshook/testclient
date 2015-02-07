@@ -127,10 +127,9 @@ Internally, the data that is used in the operations is produced by type-paramete
 
 The generator library handles these details as well as when generator instances are shared between activity threads. There is a special type of generator, ThreadNumGenerator, which uses markers on the thread to extract thread enumeration. This is used by the two initial activities above as a way to make each thread align to a partition. This isn't required, but for the type of testing that this tool was built for, it effectively guaranteed isochronous data rates evenly across the partitions. The point of calling this out here is to acknowledge that your testing might not need this, and would benefit from wider data dispersion at the partition level. There is nothing preventing such use-- It merely isn't the default for these activities.
 
-
 #### Extending cqltestclient
 
-If you need to build a test client for a particular workload, you might need to add to the generator library. The generators can be browsed
+If you need to build a test client for a particular workload, you might need to add to the generator library. The generators can be browsed in the source tree.
 
 ##### Generator Conventions
 
