@@ -12,7 +12,7 @@ public class InetAddressStringGenerator implements FastForwardableGenerator<Stri
     @Override
     public String get() {
         int image = atomicInt.incrementAndGet();
-        ByteBuffer bytes = ByteBuffer.allocate(Integer.BYTES);
+        ByteBuffer bytes = ByteBuffer.allocate(4);
         bytes.clear();
         bytes.putInt(image);
         bytes.flip();

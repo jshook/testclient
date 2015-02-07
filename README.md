@@ -1,20 +1,19 @@
 ## a Cassandra/CQL test client
 
-This client was built in order to test loading time series data in bulk. It may end up doing more than that when it grows up, but right now it is still "finding" itself. Read more for details of how it works.
-
-This repo will be opened after it passes the 1.0 milestone under an APL license.
-
-This repo will very likely change as well. If you have private access to it, I will maintain some tags to mark the state of the repo before making any significant detours. However, I do plan to change the client for the better in the future. Please don't assume it to be stable if you are tracking the master branch.
+This client was originally built in order to test loading time series data in bulk. It may end up doing more than that when it grows up, but right now it is still a fledgeling. Read more for details of how it works.
 
 ### Requirements
 
-This test client is released as an executable jar. You simply need a java runtime version 7 or newer. See the releases to download the jar directly.
+To just use the client as it is, simply download the jar and run it with JVM version 7 or newer.
+This test client is released as an executable jar. See the project releases to download the jar directly.
+
+If you intend to use this source code as a starting point for running a dedicated test, then you might need to install maven first.
 
 ### Command Line
 
 To see the options supported, simply
 
-    java -jar testclient.jar -help
+    java -jar cqltestclient.jar -help
 
 The basics have been included here as well:
 
@@ -33,19 +32,23 @@ The basics have been included here as well:
 
 __create the schema for activity WriteTelemetryAsync__
 
-    java -jar testclient.jar --host=10.10.10.10 --activity=WriteTelemetryAsync --createschema
+    java -jar cqltestclient.jar --host=10.10.10.10 --activity=WriteTelemetryAsync --createschema
+
+In the example above, cqltestclient looks for a class named WriteTelemetryAsync in the com.metawiring.load.activities package. It then calls the createSchema() method on it and exits.
 
 __insert 1000000 records using 100 threads and 1000 pending async__
 
-    java -jar testclient.jar --host=10.10.10.10 --activity=WriteTelemetryAsync:1000000:100:1000
+    java -jar cqltestclient.jar --host=10.10.10.10 --activity=write-telemetry:1000000:100:1000
+
+Notice that this example is slightly different. The --activity argument is not a proper class name. In this case, cqltestclient will look for a yaml file in the classpath under activities/write-telemetry.yaml. It will then initialize and run a YamlConfigurableActivity with it.
 
 __read the same records back, with 100 threads and 200 pending async__
 
-    java -jar testclient.jar --host=10.10.10.10 --activity=ReadTelemetryAsync:1000000:100:200
+    java -jar cqltestclient.jar --host=10.10.10.10 --activity=ReadTelemetryAsync:1000000:100:200
 
 __do both at the same time__
 
-    java -jar testclient.jar --host=10.10.10.10 --activity=WriteTelemetryAsync:1000000:100:1000 --activity=ReadTelemetryAsync:1000000:100:1000
+    java -jar cqltestclient.jar --host=10.10.10.10 --activity=WriteTelemetryAsync:1000000:100:1000 --activity=ReadTelemetryAsync:1000000:100:1000
 
 ### Activities
 
@@ -53,6 +56,10 @@ The contextual workloads are defined as _Activities_, which is just an interface
 the iterations are divided up between the threads. By default, the specific cycles numbers will not be assigned distinctly to the threads, although the
 cycle counts will. If you want the cycles to be divided up by range, then use the --splitcycles option. This applies to all activities on the command line for now.
 be seen by several threads.
+
+You have the option of using one of the direct Activity types or a yaml configured activity. The preferred way is to use YAML to configure and run your activities, since the internal boilerplate logic is pretty standard. The previous activity implementations were left as examples for those who might want to tinker with or build their own activity implementations.
+
+The remainder of the documentation describes all of the current activities in general. If you implement your own activity, then it may not apply, depending on how you choose to build it.
 
 #### Cycle Semantics
 
@@ -69,7 +76,7 @@ Some details about how async activities work:
  - if this fails before the 10th try, then the op is resubmitted and the thread sleeps for 0.1 * tries seconds
  - if the op failed and at least 10 tries have been used, then the op is not retried
 
-##### activity: WriteTelemetryAsync
+##### activity: WriteTelemetryAsync AKA write-telemetry
 
 The schema for this activity is
 
@@ -98,7 +105,7 @@ where the fields are, respectively:
 
 As this activity runs, it creates data that moves forward in time, starting at the beginning of the epoch. This is suitable to DTCS testing and general time-series or temporally-ordered testing. If you want to control the number of rows written, overall, then the cycle count in the activity option does this. If you want to control the specific times that are used, then the cycle range in (min..max] format can do this. However, the math is thrown off if you change the number of threads, since the cycles are distributed among all threads, while the starting cycle set on all of them.
 
-##### activity: ReadTelemetryAsync
+##### activity: ReadTelemetryAsync AKA read-telemetry
 
 This activity uses the same schema as WriteTelemetryAsync. 
 
@@ -119,6 +126,66 @@ This means that reads will be mostly constrained by partition, which is good. Ho
 Internally, the data that is used in the operations is produced by type-parameterized generators. This means that if you want a second-resolution DateTime object, then you have to have a generator of type Generator&lt;DateTime&gt; with the implementation and instance details to handle the second resolution.
 
 The generator library handles these details as well as when generator instances are shared between activity threads. There is a special type of generator, ThreadNumGenerator, which uses markers on the thread to extract thread enumeration. This is used by the two initial activities above as a way to make each thread align to a partition. This isn't required, but for the type of testing that this tool was built for, it effectively guaranteed isochronous data rates evenly across the partitions. The point of calling this out here is to acknowledge that your testing might not need this, and would benefit from wider data dispersion at the partition level. There is nothing preventing such use-- It merely isn't the default for these activities.
+
+
+#### Extending cqltestclient
+
+If you need to build a test client for a particular workload, you might need to add to the generator library. The generators can be browsed
+
+##### Generator Conventions
+
+If you are going to add generators, follow these guidlines:
+
+Generators constructors which take parameters should provide a constructor which uses all String arguments at the very least. Generators which are threadsafe should implement ThreadSafeGenerator, and those which can be advanced to a particular point in the cycle count should also implement FastForwardableGenerator.
+
+ThreadSafeGenerator is simply a tagging interface which allows the generator resolver to avoid sharing generators which are not thread-safe.
+
+FastForwardableGenerator is an interface that allows an activity to advance the starting point for a generator so that you can control the range of cycles used in your test.
+
+#### YAML Activity Configuration
+
+Here is an example activity as configured in YAML:
+
+    ddl:
+    - name: create-keyspace
+      cql: |
+        create keyspace if not exists <<KEYSPACE>> WITH replication =
+        {'class': 'SimpleStrategy', 'replication_factor': <<RF>>};
+    - name: create-telemetry-table
+      cql: |
+        create table if not exists <<KEYSPACE>>.<<TABLE>>_telemetry (
+        source int,      // data source id
+        epoch_hour text, // time bucketing
+        param text,      // variable name for a type of measurement
+        ts timestamp,    // timestamp of measurement
+        cycle bigint,    // cycle, for diagnostics
+        data text,       // measurement data
+        PRIMARY KEY ((source, epoch_hour), param, ts)
+        ) WITH CLUSTERING ORDER BY (param ASC, ts DESC)
+    dml:
+     - name: write-telemetry
+       cql: |
+         insert into <<KEYSPACE>>.<<TABLE>> (source, epoch_hour, param, ts, data, cycle)
+         values (<<source>>,<<epoch_hour>>,<<param>>,<<ts>>,<<data>>,<<cycle>>);
+       bindings:
+         source: threadnum
+         epoch_hour: date-epoch-hour
+         param: varnames
+         ts: datesecond
+         data: loremipsum:100:200
+         cycle: cycle
+
+The __ddl__ section contains the statements needed to configure your keyspace and tables. They will get called in order when you are executing cqltestclient with --createSchema.
+The __dml__ section contains the statements that you want to run for each cycle. Just as with the DDL statements, you can have as many as you like. The activity will use one of these for each cycle, rotating through them in order.
+
+The format of the __cql__ section shows how to use multi-line statements in YAML while preserving newlines. As long as you preserve newlines, you're free to use // comments to explain the parameters. If you do not maintain the newlines, then you will have syntax errors because of invalid comments.
+
+The __bindings__ sections are how named place-holders are mapped to data generator functions. Currently, these names are not cross-checked between the cql and binding names.
+
+The &lt;&lt;word&gt;&gt; convention is used for parameter substitution. KEYSPACE, TABLE, and RF are all substituted automatically from the command line options. The _create table_ clause above shows a convention that uses both the configured TABLE name as well as a _tablename value. This is a useful way to have a common configurable prefix when you are using multiple tables.
+
+Both the __ddl__ and __dml__ sections contain exactly the same thing strcuturally. In fact, it's exactly the same configuration type internally. Both contain a list of named statements with their cql template and a set of associated bindings. You don't see any bindings under ddl because they are meaningless there for this example activity.
+
 
 ## Metrics
 
