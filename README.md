@@ -290,3 +290,6 @@ The rate of exceptions of the given name. There could be various names of this m
 
 The number of configured activities reported at the start of this test run.
 
+# LICENSE
+
+This is licensed under the Apache Public License. See the included LICENSE.txt for details.
