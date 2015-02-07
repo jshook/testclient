@@ -3,10 +3,7 @@ package com.metawiring.load.activities;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.*;
 import com.metawiring.load.activity.Activity;
 import com.metawiring.load.activity.DefaultActivitySourceResolver;
 import com.metawiring.load.config.YamlActivityDef;
@@ -104,8 +101,12 @@ public class YamlConfigurableActivity implements Activity {
         if (!configuredActivities.containsKey(name)) {
             synchronized (YamlConfigurableActivity.class) {
                 if (!configuredActivities.containsKey(name)) {
-                    ReadyStatements rs = configureActivity(yamlActivityDef, startCycle);
-                    configuredActivities.put(name,rs);
+                    if (context.getConfig().createSchema) {
+                        createSchema();
+                    } else {
+                        ReadyStatements rs = configureActivity(yamlActivityDef, startCycle);
+                        configuredActivities.put(name,rs);
+                    }
                 }
             }
         }
@@ -116,11 +117,6 @@ public class YamlConfigurableActivity implements Activity {
     private ReadyStatements configureActivity(YamlActivityDef yamlActivityDef, long startCycle) {
 
         session = context.getSession();
-
-        if (context.getConfig().createSchema) {
-            createSchema();
-            return null;
-        }
 
         try {
 
@@ -151,6 +147,8 @@ public class YamlConfigurableActivity implements Activity {
     @Override
     public void createSchema() {
 
+        session = context.getSession();
+
         for (YamlActivityDef.StatementDef statementDef: yamlActivityDef.getDdl()) {
             String qualifiedStatement = statementDef.getCookedStatement(context.getConfig());
             try {
@@ -164,7 +162,6 @@ public class YamlConfigurableActivity implements Activity {
         }
 
     }
-
 
     /**
      * Normalize receiving rate to 1/iterate() for now, with bias on priming rq queue
@@ -210,7 +207,7 @@ public class YamlConfigurableActivity implements Activity {
             Timer.Context waitTimer = null;
             try {
                 waitTimer = timerWaits.time();
-                trsf.rsFuture.getUninterruptibly();
+                ResultSet resultSet = trsf.rsFuture.getUninterruptibly();
                 waitTimer.stop();
                 waitTimer = null;
                 break;
