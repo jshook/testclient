@@ -185,6 +185,8 @@ The format of the __cql__ section shows how to use multi-line statements in YAML
 
 The __bindings__ sections are how named place-holders are mapped to data generator functions. Currently, these names are not cross-checked between the cql and binding names.
 
+The bindings map a field position to a generator function. They must be in order of the target field names as specified in the cql. When it is time to instantiate a generator to feed values to a statement, the resolution can happen in one of two ways. First,  if the GeneratorSourceImpl class in the com.metawiring.load.generator package contains a mapping for the named generator, then that generator is used. Otherwise, if there is a class of the same name as the generator in the com.metawiring.load.generators package, it is instantiated and used.
+
 The &lt;&lt;word&gt;&gt; convention is used for parameter substitution. KEYSPACE, TABLE, and RF are all substituted automatically from the command line options. The _create table_ clause above shows a convention that uses both the configured TABLE name as well as a _tablename value. This is a useful way to have a common configurable prefix when you are using multiple tables.
 
 Both the __ddl__ and __dml__ sections contain exactly the same thing strcuturally. In fact, it's exactly the same configuration type internally. Both contain a list of named statements with their cql template and a set of associated bindings. You don't see any bindings under ddl because they are meaningless there for this example activity.
@@ -293,6 +295,6 @@ The rate of exceptions of the given name. There could be various names of this m
 
 The number of configured activities reported at the start of this test run.
 
-# LICENSE
+## LICENSE
 
-This is licensed under the Apache Public License. See the included LICENSE.txt for details.
+This is licensed under the Apache Public License 2.0
