@@ -1,4 +1,4 @@
-package com.metawiring.load.generators;
+package com.metawiring.load.generator;
 
 import com.metawiring.load.generator.Generator;
 

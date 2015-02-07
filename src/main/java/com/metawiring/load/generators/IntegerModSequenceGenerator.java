@@ -1,11 +1,10 @@
 package com.metawiring.load.generators;
 
-import com.metawiring.load.generator.Generator;
+import com.metawiring.load.generator.FastForwardableGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.InvalidParameterException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class IntegerModSequenceGenerator implements FastForwardableGenerator<Integer> {
     private final static Logger logger = LoggerFactory.getLogger(IntegerModSequenceGenerator.class);

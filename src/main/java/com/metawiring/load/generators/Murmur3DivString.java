@@ -1,5 +1,6 @@
 package com.metawiring.load.generators;
 
+import com.metawiring.load.generator.FastForwardableGenerator;
 import de.greenrobot.common.hash.Murmur3F;
 
 public class Murmur3DivString implements FastForwardableGenerator<String> {

@@ -1,6 +1,7 @@
 package com.metawiring.load.generators;
 
-import org.joda.time.format.DateTimeFormat;
+import com.metawiring.load.generator.FastForwardableGenerator;
+import com.metawiring.load.generator.ThreadsafeGenerator;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.util.concurrent.atomic.AtomicLong;

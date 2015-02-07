@@ -3,7 +3,6 @@ package com.metawiring.load.generator;
 //
 
 import com.datastax.driver.core.PreparedStatement;
-import com.metawiring.load.generators.FastForwardableGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

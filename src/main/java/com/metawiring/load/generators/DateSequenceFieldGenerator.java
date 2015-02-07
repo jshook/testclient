@@ -1,11 +1,11 @@
 package com.metawiring.load.generators;
 
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
-import org.joda.time.DateTime;
+
+import com.metawiring.load.generator.FastForwardableGenerator;
+import com.metawiring.load.generator.ThreadsafeGenerator;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.DateTimeFormatterBuilder;
 
 
 public class DateSequenceFieldGenerator implements FastForwardableGenerator<String>,ThreadsafeGenerator {

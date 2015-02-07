@@ -1,7 +1,8 @@
 package com.metawiring.load.generators;
 
+import com.metawiring.load.generator.FastForwardableGenerator;
+
 import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;

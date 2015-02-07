@@ -1,9 +1,6 @@
 package com.metawiring.load.generators;
 
-import com.metawiring.load.generator.Generator;
-import org.apache.commons.math3.distribution.IntegerDistribution;
-import org.apache.commons.math3.distribution.UniformIntegerDistribution;
-import org.apache.commons.math3.random.MersenneTwister;
+import com.metawiring.load.generator.FastForwardableGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

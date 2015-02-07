@@ -1,4 +1,4 @@
-package com.metawiring.load.generators;
+package com.metawiring.load.generator;
 
 /**
  * This is a tagging interface only, since Java doesn't actually know whether something

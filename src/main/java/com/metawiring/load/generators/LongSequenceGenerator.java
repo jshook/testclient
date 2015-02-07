@@ -1,6 +1,7 @@
 package com.metawiring.load.generators;
 
-import com.metawiring.load.generator.Generator;
+import com.metawiring.load.generator.FastForwardableGenerator;
+import com.metawiring.load.generator.ThreadsafeGenerator;
 
 import java.util.concurrent.atomic.AtomicLong;
 
