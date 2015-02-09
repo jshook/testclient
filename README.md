@@ -74,7 +74,7 @@ Each time an activity harness iterates an activity, it expects the activity to h
 Some details about how async activities work:
 - Before any inner loop is called, the activity is initialized, including prepared statements and data generator bindings.
 - The inner loop always tries to fill the async pipeline up to the configured allowance.
-- After async the pipeline is primed, the second phase of the inner loop does the following:
+- After the async pipeline is primed, the second phase of the inner loop does the following:
  - tries to get the async result
  - if this fails before the 10th try, then the op is resubmitted and the thread sleeps for 0.1 * tries seconds
  - if the op failed and at least 10 tries have been used, then the op is not retried
