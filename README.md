@@ -188,7 +188,7 @@ The bindings map a field position to a generator function. They must be in order
 
 The &lt;&lt;word&gt;&gt; convention is used for parameter substitution. KEYSPACE, TABLE, and RF are all substituted automatically from the command line options. The _create table_ clause above shows a convention that uses both the configured TABLE name as well as a _tablename value. This is a useful way to have a common configurable prefix when you are using multiple tables.
 
-Both the __ddl__ and __dml__ sections contain exactly the same thing strcuturally. In fact, it's exactly the same configuration type internally. Both contain a list of named statements with their cql template and a set of associated bindings. You don't see any bindings under ddl because they are meaningless there for this example activity.
+Both the __ddl__ and __dml__ sections contain exactly the same thing structurally. In fact, it's exactly the same configuration type internally. Both contain a list of named statements with their cql template and a set of associated bindings. You don't see any bindings under ddl because they are meaningless there for this example activity.
 
 
 ## Metrics
