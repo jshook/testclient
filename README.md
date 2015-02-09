@@ -57,9 +57,8 @@ __do both at the same time__
 ### Activities
 
 The contextual workloads are defined as _Activities_, which is just an interface that an ActivityHarness uses to run the activity. You can specify how
-the iterations are divided up between the threads. By default, the specific cycles numbers will not be assigned distinctly to the threads, although the
+the iterations are divided up between the threads. By default, the specific cycle numbers will not be assigned distinctly to the threads, although the
 cycle counts will. If you want the cycles to be divided up by range, then use the --splitcycles option. This applies to all activities on the command line for now.
-be seen by several threads.
 
 You have the option of using one of the direct Activity types or a yaml configured activity. The preferred way is to use YAML to configure and run your activities, since the internal boilerplate logic is pretty standard. The previous activity implementations were left as examples for those who might want to tinker with or build their own activity implementations.
 
