@@ -21,6 +21,7 @@ package com.metawiring.load.core;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ScheduledReporter;
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ProtocolOptions;
 import com.datastax.driver.core.Session;
 import com.metawiring.load.config.TestClientConfig;
 import com.metawiring.load.generator.GeneratorInstanceSource;
@@ -53,7 +54,8 @@ public class ExecutionContext {
 
         Cluster.Builder builder = Cluster.builder()
                 .addContactPoint(config.host)
-                .withPort(config.port);
+                .withPort(config.port)
+                .withCompression(ProtocolOptions.Compression.NONE);
 
         if (config.user != null && !config.user.isEmpty()) {
             builder.withCredentials(config.user, config.password);
