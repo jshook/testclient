@@ -109,12 +109,12 @@ public class YamlConfigurableActivity implements Activity {
         this.endCycle = endCycle;
         submittedCycle = startCycle - 1l;
 
-        timerOps = context.getMetrics().timer(name(YamlConfigurableActivity.class.getSimpleName(), "ops-total"));
-        timerWaits = context.getMetrics().timer(name(YamlConfigurableActivity.class.getSimpleName(), "ops-wait"));
-        activityAsyncPendingCounter = context.getMetrics().counter(name(YamlConfigurableActivity.class.getSimpleName(), "async-pending"));
-        triesHistogram = context.getMetrics().histogram(name(YamlConfigurableActivity.class.getSimpleName(), "tries-histogram"));
+        timerOps = context.getMetrics().timer(name(name, "ops-total"));
+        timerWaits = context.getMetrics().timer(name(name, "ops-wait"));
+        activityAsyncPendingCounter = context.getMetrics().counter(name(name, "async-pending"));
+        triesHistogram = context.getMetrics().histogram(name(name, "tries-histogram"));
         // To populate the namespace
-        context.getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
+        context.getMetrics().meter(name(name, "exceptions", "PlaceHolderException"));
 
         if (!configuredActivities.containsKey(name)) {
             synchronized (YamlConfigurableActivity.class) {
