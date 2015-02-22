@@ -47,4 +47,8 @@ public class ReadyStatements {
         return this;
     }
 
+    public ReadyStatement[] getReadyStatements() {
+        return readyStatements;
+    }
+
 }
