@@ -83,7 +83,10 @@ public class YamlConfigurableActivity implements Activity {
             try {
                 logger.debug("Looking for " + streamname + " on filesystem.");
                 InputStream stream = null;
-                stream =new FileInputStream(streamname);
+                try {
+                    stream =new FileInputStream(streamname);
+                } catch (Exception ignored) {
+                }
                 if ( stream == null ) {
                     logger.debug("Not found on filesystem, looking for " + streamname + " on in classpath.");
                     stream = DefaultActivitySourceResolver.class.getClassLoader().getResourceAsStream(streamname);
