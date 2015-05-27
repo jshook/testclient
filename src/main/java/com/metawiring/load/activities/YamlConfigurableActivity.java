@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,7 +81,16 @@ public class YamlConfigurableActivity implements Activity {
         Yaml yaml = new Yaml();
         for (String streamname : new String[]{"activities/" + name, "activities/" + name + ".yaml"}) {
             try {
-                InputStream stream = DefaultActivitySourceResolver.class.getClassLoader().getResourceAsStream(streamname);
+                logger.debug("Looking for " + streamname + " on filesystem.");
+                InputStream stream = null;
+                try {
+                    stream =new FileInputStream(streamname);
+                } catch (Exception ignored) {
+                }
+                if ( stream == null ) {
+                    logger.debug("Not found on filesystem, looking for " + streamname + " on in classpath.");
+                    stream = DefaultActivitySourceResolver.class.getClassLoader().getResourceAsStream(streamname);
+                }
                 if (stream != null) {
                     try {
                         yamlActivityDef = yaml.loadAs(stream, YamlActivityDef.class);
