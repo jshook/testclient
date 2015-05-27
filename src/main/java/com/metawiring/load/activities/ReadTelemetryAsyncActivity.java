@@ -103,8 +103,8 @@ public class ReadTelemetryAsyncActivity extends BaseActivity {
                             }
 
                             String statement = selectStmt;
-                            statement = statement.replaceAll("KEYSPACE",context.getConfig().getKeyspace());
-                            statement = statement.replaceAll("TABLE",context.getConfig().getTable());
+                            statement = statement.replaceAll("KEYSPACE",context.getConfig().keyspace);
+                            statement = statement.replaceAll("TABLE",context.getConfig().table);
                             selectTelemetryStmt = session.prepare(statement).setConsistencyLevel(context.getConfig().defaultConsistencyLevel);
                         }
                     } catch (Exception e) {

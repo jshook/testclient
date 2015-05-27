@@ -34,14 +34,15 @@ public class ActivityHarness implements Runnable {
 
     private final ActivityInstanceSource ActivityInstanceSource;
     private final ExecutionContext context;
-    private final long startCycle,endCycle,maxAsync;
+    private final long startCycle, endCycle, maxAsync, interCycleDelay;
 
-    public ActivityHarness(ActivityInstanceSource ActivityInstanceSource, ExecutionContext context, long startCycle, long endCycle, long maxAsync) {
+    public ActivityHarness(ActivityInstanceSource ActivityInstanceSource, ExecutionContext context, long startCycle, long endCycle, long maxAsync, int interCycleDelay) {
         this.ActivityInstanceSource = ActivityInstanceSource;
         this.context = context;
         this.startCycle = startCycle;
         this.endCycle = endCycle;
         this.maxAsync = maxAsync;
+        this.interCycleDelay = interCycleDelay;
     }
 
     @Override
@@ -50,13 +51,28 @@ public class ActivityHarness implements Runnable {
         Activity activity = ActivityInstanceSource.get();
 
         activity.init(ActivityInstanceSource.getActivityName(), context);
-        activity.prepare(startCycle,endCycle,maxAsync);
+        activity.prepare(startCycle, endCycle, maxAsync);
 
-        Counter cycleCounter = context.getMetrics().counter(name(activity.getClass().getSimpleName(),"cycles"));
+        Counter cycleCounter = context.getMetrics().counter(name(activity.getClass().getSimpleName(), "cycles"));
         cycleCounter.inc(startCycle);
-        for (long cycle = startCycle; cycle < endCycle; cycle++) {
-            cycleCounter.inc();
-            activity.iterate();
+
+        if (interCycleDelay > 0) {
+
+            for (long cycle = startCycle; cycle < endCycle; cycle++) {
+                cycleCounter.inc();
+                activity.iterate();
+
+                try {
+                    Thread.sleep(interCycleDelay);
+                } catch (InterruptedException ignored) {
+                    // It's not worth it
+                }
+            }
+        } else { // Hedge against the try catch
+            for (long cycle = startCycle; cycle < endCycle; cycle++) {
+                cycleCounter.inc();
+                activity.iterate();
+            }
         }
 
         activity.cleanup();
@@ -64,7 +80,7 @@ public class ActivityHarness implements Runnable {
     }
 
     public String getCycleSummary() {
-        return "(" + startCycle + ".." + endCycle + "], total=" + (endCycle-startCycle);
+        return "(" + startCycle + ".." + endCycle + "], total=" + (endCycle - startCycle);
     }
 
     public String toString() {

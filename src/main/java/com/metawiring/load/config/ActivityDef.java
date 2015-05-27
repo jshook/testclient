@@ -27,13 +27,15 @@ public class ActivityDef {
     private final long startCycle,endCycle;
     private final int threads;
     private int maxAsync = 1000;
+    private int interCycleDelay;
 
-    public ActivityDef(String name, long startCycle, long endCycle, int threads, int maxAsync) {
+    public ActivityDef(String name, long startCycle, long endCycle, int threads, int maxAsync, int interCycleDelay) {
         this.name = name;
         this.threads = threads;
         this.maxAsync = maxAsync;
         this.startCycle = startCycle;
         this.endCycle = endCycle;
+        this.interCycleDelay = interCycleDelay;
     }
 
     public String toString() {
@@ -72,5 +74,9 @@ public class ActivityDef {
 
     public long getTotalCycles() {
         return endCycle-startCycle;
+    }
+
+    public int getInterCycleDelay() {
+        return interCycleDelay;
     }
 }

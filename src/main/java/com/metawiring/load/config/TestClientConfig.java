@@ -80,14 +80,6 @@ public class TestClientConfig {
         return new Builder();
     }
 
-    public String getKeyspace() {
-        return keyspace;
-    }
-
-    public String getTable() {
-        return table;
-    }
-
     public static class Builder {
 
         private String host = "localhost";
@@ -172,9 +164,11 @@ public class TestClientConfig {
             String aThreads="1";
             String aCycles="1";
             String aMaxSync="1";
+            String aInterCycleDelay="0";
 
-
+            int interCycleDelay = 0;
             switch (parts.length) {
+                case 5: aInterCycleDelay = parts[4];
                 case 4: aMaxSync = parts[3];
                 case 3: aThreads = parts[2];
                 case 2: aCycles = parts[1];
@@ -201,7 +195,8 @@ public class TestClientConfig {
                     new ActivityDef(
                             aName,
                             Long.valueOf(aCyclesMin),Long.valueOf(aCyclesMax),
-                            Integer.valueOf(aThreads),Integer.valueOf(aMaxSync)
+                            Integer.valueOf(aThreads),Integer.valueOf(aMaxSync),
+                            Integer.valueOf(aInterCycleDelay)
                     )
             );
 
@@ -251,5 +246,6 @@ public class TestClientConfig {
             this.defaultReplicationFactor=Integer.valueOf(rf);
             return this;
         }
+
     }
 }

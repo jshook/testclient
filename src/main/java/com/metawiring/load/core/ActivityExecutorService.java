@@ -84,7 +84,7 @@ public class ActivityExecutorService {
                     long threadStartCycle = cycleRanges[tidx * 2];
                     long threadEndCycle = cycleRanges[(tidx * 2) + 1];
 
-                    ActivityHarness activityHarness = new ActivityHarness(activityInstanceSource, context, threadStartCycle, threadEndCycle, threadMaxAsync);
+                    ActivityHarness activityHarness = new ActivityHarness(activityInstanceSource, context, threadStartCycle, threadEndCycle, threadMaxAsync, def.getInterCycleDelay());
                     executorService.execute(activityHarness);
                     logger.info("started activity harness " + tidx + " for " + def + ", cycles: " + activityHarness.getCycleSummary());
                 }
@@ -133,17 +133,6 @@ public class ActivityExecutorService {
         }
         return ranges;
     }
-
-//    private long divideCycles(long cyclePoint, int threads, int tidx) {
-//        long cycleDiv = (cyclePoint / threads);
-//        long cycleRemainder = (cyclePoint % threads);
-//        // apportion the remainder to each idx, as available
-//        if (tidx < cycleRemainder) {
-//            cycleDiv++;
-//        }
-//
-//        return cycleDiv;
-//    }
 
     public String toString() {
         return getClass().getSimpleName() + " context summary\n" + context.getSummary();

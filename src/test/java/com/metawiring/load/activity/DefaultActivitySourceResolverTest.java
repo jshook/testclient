@@ -28,7 +28,7 @@ public class DefaultActivitySourceResolverTest {
     @Test
     public void testGetResolvesYamlSource() throws Exception {
         DefaultActivitySourceResolver dasr = new DefaultActivitySourceResolver();
-        ActivityDef ad = new ActivityDef("write-telemetry",0,1,1,1);
+        ActivityDef ad = new ActivityDef("write-telemetry",0,1,1,1,0);
         ActivityInstanceSource source = dasr.get(ad);
         assertNotNull(source);
     }
