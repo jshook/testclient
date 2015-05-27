@@ -34,11 +34,11 @@ The basics have been included here as well:
 
 ### Example Command Lines
 
-__create the schema for activity WriteTelemetryAsync__
+__create the schema for the write-telemetry activity__
 
     java -jar cqltestclient.jar --host=10.10.10.10 --activity=write-telemetry --createschema
 
-In the example above, cqltestclient looks for a class named WriteTelemetryAsync in the com.metawiring.load.activities package. It then calls the createSchema() method on it and exits.
+In the example above, cqltestclient looks for an activity definition in activities/write-telemetry.yaml, and then in the classpath under the same resource path. It then calls the createSchema(), using the ddl contained in that file.
 
 __insert 1000000 records using 100 threads and 1000 pending async__
 
