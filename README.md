@@ -34,25 +34,35 @@ The basics have been included here as well:
 
 ### Example Command Lines
 
-__create the schema for activity WriteTelemetryAsync__
+__create the schema for the write-telemetry activity__
 
-    java -jar cqltestclient.jar --host=10.10.10.10 --activity=WriteTelemetryAsync --createschema
+    java -jar cqltestclient.jar --host=10.10.10.10 --activity=write-telemetry --createschema
 
-In the example above, cqltestclient looks for a class named WriteTelemetryAsync in the com.metawiring.load.activities package. It then calls the createSchema() method on it and exits.
+In the example above, cqltestclient looks for an activity definition in activities/write-telemetry.yaml, and then in the classpath under the same resource path. It then calls the createSchema(), using the ddl contained in that file.
 
 __insert 1000000 records using 100 threads and 1000 pending async__
 
-    java -jar cqltestclient.jar --host=10.10.10.10 --activity=write-telemetry:1000000:100:1000
+    java -jar cqltestclient.jar --host=10.10.10.10 \
+    --activity=write-telemetry:1000000:100:1000
 
-Notice that this example is slightly different. The --activity argument is not a proper class name. In this case, cqltestclient will look for a yaml file in the classpath under activities/write-telemetry.yaml. It will then initialize and run a YamlConfigurableActivity with it.
+Notice that this example is slightly different. The --activity argument is not a proper class name. In this case, cqltestclient will look for a yaml file in the classpath under activities/write-telemetry.yaml. It will then initialize and run a YamlConfigurableActivity with it. The backslash is there to break the longer line up for readability.
 
 __read the same records back, with 100 threads and 200 pending async__
 
-    java -jar cqltestclient.jar --host=10.10.10.10 --activity=ReadTelemetryAsync:1000000:100:200
+    java -jar cqltestclient.jar --host=10.10.10.10 \
+    --activity=read-telemetry:1000000:100:200
 
 __do both at the same time__
 
-    java -jar cqltestclient.jar --host=10.10.10.10 --activity=WriteTelemetryAsync:1000000:100:1000 --activity=ReadTelemetryAsync:1000000:100:1000
+    java -jar cqltestclient.jar --host=10.10.10.10 \
+    --activity=write-telemetry:1000000:100:1000 \
+    --activity=read-telemetry:1000000:100:1000
+
+__do both at the same time, with an additional 3ms delay between the reads on each thread__
+
+    java -jar cqltestclient.jar --host=10.10.10.10 \
+    --activity=write-telemetry:1000000:100:1000 \
+    --activity=read-telemetry:1000000:100:1000:3
 
 ### Activities
 

@@ -72,8 +72,8 @@ public class YamlActivityDef {
          */
         public String getCookedStatement(TestClientConfig config) {
             String statement = cql;
-            statement = statement.replaceAll("<<KEYSPACE>>", config.getKeyspace());
-            statement = statement.replaceAll("<<TABLE>>", config.getTable());
+            statement = statement.replaceAll("<<KEYSPACE>>", config.keyspace);
+            statement = statement.replaceAll("<<TABLE>>", config.table);
             statement = statement.replaceAll("<<RF>>", String.valueOf(config.defaultReplicationFactor));
             statement = statement.replaceAll("<<\\w+>>","?");
             return statement;

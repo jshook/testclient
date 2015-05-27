@@ -100,8 +100,8 @@ public class WriteRandomActivity extends BaseActivity {
                             }
 
                             String statement = insertStmt;
-                            statement = statement.replaceAll("KEYSPACE",context.getConfig().getKeyspace());
-                            statement = statement.replaceAll("TABLE",context.getConfig().getTable());
+                            statement = statement.replaceAll("KEYSPACE",context.getConfig().keyspace);
+                            statement = statement.replaceAll("TABLE",context.getConfig().table);
                             addTelemetryStmt = session.prepare(statement).setConsistencyLevel(context.getConfig().defaultConsistencyLevel);
                         }
                     } catch (Exception e) {
@@ -128,19 +128,19 @@ public class WriteRandomActivity extends BaseActivity {
     @Override
     public void createSchema() {
         String keyspaceDDL = "" +
-                "CREATE keyspace " + context.getConfig().getKeyspace() +
+                "CREATE keyspace " + context.getConfig().keyspace +
                 " with replication = {'class' : 'SimpleStrategy', 'replication_factor' : " + context.getConfig().defaultReplicationFactor + "};";
 
         try {
             session.execute(keyspaceDDL);
-            logger.info("Created keyspace " + context.getConfig().getKeyspace());
+            logger.info("Created keyspace " + context.getConfig().keyspace);
         } catch (Exception e) {
-            logger.error("Error while creating keyspace " + context.getConfig().getKeyspace(), e);
+            logger.error("Error while creating keyspace " + context.getConfig().keyspace, e);
             throw new RuntimeException(e); // Let this escape, it's a critical runtime exception
         }
 
         String tableDDL = "" +
-                "CREATE table "+ context.getConfig().getKeyspace() + "." + context.getConfig().getTable() +
+                "CREATE table "+ context.getConfig().keyspace + "." + context.getConfig().table +
                 " (\n" +
                 "  source int,\n" +
                 "  epoch_hour text,\n" +
@@ -153,9 +153,9 @@ public class WriteRandomActivity extends BaseActivity {
 
         try {
             session.execute(tableDDL);
-            logger.info("Created table " + context.getConfig().getTable());
+            logger.info("Created table " + context.getConfig().table);
         } catch (Exception e) {
-            logger.error("Error while creating table " + context.getConfig().getTable(), e);
+            logger.error("Error while creating table " + context.getConfig().table, e);
             throw new RuntimeException(e); // Let this escape, it's a critical runtime exception
         }
 

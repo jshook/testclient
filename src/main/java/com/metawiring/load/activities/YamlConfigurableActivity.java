@@ -184,7 +184,7 @@ public class YamlConfigurableActivity implements Activity {
                 session.execute(qualifiedStatement);
                 logger.info("Executed DDL statement [" + qualifiedStatement + "]");
             } catch (Exception e) {
-                logger.error("Error while executing statement [" + qualifiedStatement + "] " + context.getConfig().getKeyspace(), e);
+                logger.error("Error while executing statement [" + qualifiedStatement + "] " + context.getConfig().keyspace, e);
                 throw new RuntimeException(e); // Let this escape, it's a critical runtime exception
             }
         }
