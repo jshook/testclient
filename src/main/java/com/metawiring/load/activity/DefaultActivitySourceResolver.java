@@ -102,8 +102,9 @@ public class DefaultActivitySourceResolver implements ActivitySourceResolver {
                 InputStream stream = DefaultActivitySourceResolver.class.getClassLoader().getResourceAsStream(name);
                 if (stream!=null) {
                     foundClass = YamlConfigurableActivity.class;
+                } else {
+                    logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "'...");
                 }
-                logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "'...");
             } catch (Exception e) {
                 logger.warn("Unable to find yaml class for:" + activityDef.toString());
             }
