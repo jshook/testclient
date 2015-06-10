@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.util.*;
 
 public class DefaultActivitySourceResolver implements ActivitySourceResolver {
@@ -98,19 +97,30 @@ public class DefaultActivitySourceResolver implements ActivitySourceResolver {
     private Class<? extends Activity> findYamlActivityClass(ActivityDef activityDef) {
         Class<? extends Activity> foundClass = null;
 
-        for(String name: new String[] { "activities/" + activityDef.getName(), "activities/" + activityDef.getName()+".yaml"}) {
+        for (String name : new String[]{"activities/" + activityDef.getName(), "activities/" + activityDef.getName() + ".yaml"}) {
+
+            logger.debug("Looking for " + name + " on filesystem.");
+            if (new File(name).exists()) {
+                return YamlConfigurableActivity.class;
+            } else {
+                logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "' (filesystem)...");
+            }
+
+
+            logger.debug("Looking for " + name + " on in classpath.");
             try {
                 InputStream stream = DefaultActivitySourceResolver.class.getClassLoader().getResourceAsStream(name);
-                if (stream!=null) {
-                    foundClass = YamlConfigurableActivity.class;
+                if (stream != null) {
+                    return YamlConfigurableActivity.class;
                 } else {
-                    logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "'..., while in cwd:" + Paths.get("").toAbsolutePath().toString());
+                    logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "' (classpath)...");
                 }
             } catch (Exception e) {
                 logger.warn("Unable to find yaml class for:" + activityDef.toString());
             }
+
         }
-        return foundClass;
+        return null;
     }
 
 }
