@@ -21,9 +21,13 @@ package com.metawiring.load.activity;
 import com.metawiring.load.activities.YamlConfigurableActivity;
 import com.metawiring.load.activities.WriteTelemetryAsyncActivity;
 import com.metawiring.load.config.ActivityDef;
+import com.metawiring.load.config.YamlActivityDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
@@ -52,11 +56,11 @@ public class DefaultActivitySourceResolver implements ActivitySourceResolver {
     private Class<? extends Activity> findActivityClass(ActivityDef activityDef) {
         Class<? extends Activity> activityClass = null;
         activityClass = findDirectActivityClass(activityDef);
-        if (activityClass!=null) {
+        if (activityClass != null) {
             return activityClass;
         }
         activityClass = findYamlActivityClass(activityDef);
-        if (activityClass!=null) {
+        if (activityClass != null) {
             return activityClass;
         }
         throw new RuntimeException("Unable to find any type of activity class for " + activityDef.toString());
@@ -97,19 +101,30 @@ public class DefaultActivitySourceResolver implements ActivitySourceResolver {
     private Class<? extends Activity> findYamlActivityClass(ActivityDef activityDef) {
         Class<? extends Activity> foundClass = null;
 
-        for(String name: new String[] { "activities/" + activityDef.getName(), "activities/" + activityDef.getName()+".yaml"}) {
+        for (String name : new String[]{"activities/" + activityDef.getName(), "activities/" + activityDef.getName() + ".yaml"}) {
+
+            logger.debug("Looking for " + name + " on filesystem.");
+            if (new File(name).exists()) {
+                return YamlConfigurableActivity.class;
+            } else {
+                logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "' (filesystem)...");
+            }
+
+
+            logger.debug("Looking for " + name + " on in classpath.");
             try {
                 InputStream stream = DefaultActivitySourceResolver.class.getClassLoader().getResourceAsStream(name);
-                if (stream!=null) {
-                    foundClass = YamlConfigurableActivity.class;
+                if (stream != null) {
+                    return YamlConfigurableActivity.class;
                 } else {
-                    logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "'...");
+                    logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "' (classpath)...");
                 }
             } catch (Exception e) {
                 logger.warn("Unable to find yaml class for:" + activityDef.toString());
             }
+
         }
-        return foundClass;
+        return null;
     }
 
 }
