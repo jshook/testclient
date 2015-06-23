@@ -24,7 +24,9 @@ import com.metawiring.load.config.ActivityDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class DefaultActivitySourceResolver implements ActivitySourceResolver {
@@ -103,7 +105,7 @@ public class DefaultActivitySourceResolver implements ActivitySourceResolver {
             if (new File(name).exists()) {
                 return YamlConfigurableActivity.class;
             } else {
-                logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "' (filesystem)...");
+                logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "' (filesystem)..., while in cwd:" + Paths.get("").toAbsolutePath().toString());
             }
 
 
