@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class DefaultActivitySourceResolver implements ActivitySourceResolver {
@@ -103,7 +104,7 @@ public class DefaultActivitySourceResolver implements ActivitySourceResolver {
                 if (stream!=null) {
                     foundClass = YamlConfigurableActivity.class;
                 } else {
-                    logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "'...");
+                    logger.info("Activity '" + activityDef.getName() + "' not found in '" + name + "'..., while in cwd:" + Paths.get("").toAbsolutePath().toString());
                 }
             } catch (Exception e) {
                 logger.warn("Unable to find yaml class for:" + activityDef.toString());
