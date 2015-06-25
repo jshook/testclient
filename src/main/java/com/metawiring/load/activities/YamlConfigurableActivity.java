@@ -278,7 +278,7 @@ public class YamlConfigurableActivity implements Activity {
 
     protected void instrumentException(Exception e) {
         String exceptionType = e.getClass().getSimpleName();
-        context.getMetrics().meter(name(getClass().getSimpleName(), "exceptions", exceptionType)).mark();
+        context.getMetrics().meter(name(name, "exceptions", exceptionType)).mark();
         if (diagnoseExceptions) {
             throw new RuntimeException(e);
         }
