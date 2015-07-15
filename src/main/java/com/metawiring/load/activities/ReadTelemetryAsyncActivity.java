@@ -21,12 +21,10 @@ package com.metawiring.load.activities;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
-import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.metawiring.load.activity.TimedResultSetFuture;
-import com.metawiring.load.generator.GeneratorBindings;
+import com.metawiring.load.generator.GeneratorBindingList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +39,7 @@ import static com.codahale.metrics.MetricRegistry.name;
 public class ReadTelemetryAsyncActivity extends BaseActivity {
 
     private static Logger logger = LoggerFactory.getLogger(ReadTelemetryAsyncActivity.class);
-    private GeneratorBindings generatorBindings;
+    private GeneratorBindingList generatorBindingList;
 
     private static final String SOURCE_FIELD = "source";
     private static final String PARAM_FIELD = "param";
@@ -118,10 +116,10 @@ public class ReadTelemetryAsyncActivity extends BaseActivity {
 
         // The names are not used as actual parameters for now, but hopefully will later
         // At least they are useful for diagnosing generator behavior
-        generatorBindings = createGeneratorBindings();
-        generatorBindings.bindGenerator(selectTelemetryStmt, SOURCE_FIELD, "threadnum");
-        generatorBindings.bindGenerator(selectTelemetryStmt, EPOCH_HOUR_FIELD, "date-epoch-hour", startCycle);
-        generatorBindings.bindGenerator(selectTelemetryStmt, PARAM_FIELD, "varnames");
+        generatorBindingList = createGeneratorBindings();
+        generatorBindingList.bindGenerator(selectTelemetryStmt, SOURCE_FIELD, "threadnum");
+        generatorBindingList.bindGenerator(selectTelemetryStmt, EPOCH_HOUR_FIELD, "date-epoch-hour", startCycle);
+        generatorBindingList.bindGenerator(selectTelemetryStmt, PARAM_FIELD, "varnames");
 
     }
 
@@ -137,7 +135,7 @@ public class ReadTelemetryAsyncActivity extends BaseActivity {
             try {
 
                 TimedResultSetFuture trsf = new TimedResultSetFuture();
-                trsf.boundStatement = selectTelemetryStmt.bind(generatorBindings.getAll());
+                trsf.boundStatement = selectTelemetryStmt.bind(generatorBindingList.getAll());
                 trsf.timerContext = timerOps.time();
                 trsf.rsFuture = session.executeAsync(trsf.boundStatement);
                 trsf.tries++;

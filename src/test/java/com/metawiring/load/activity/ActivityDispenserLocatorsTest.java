@@ -19,10 +19,18 @@
 package com.metawiring.load.activity;
 
 import com.metawiring.load.config.ActivityDef;
+import org.testng.annotations.Test;
 
-/**
- * Looks up activity sources.
- */
-public interface ActivitySourceResolver {
-    public ActivityInstanceSource get(ActivityDef activityDef);
+import static org.testng.Assert.*;
+
+public class ActivityDispenserLocatorsTest {
+
+    @Test
+    public void testGetResolvesYamlSource() throws Exception {
+        ActivityDispenserLocators dasr = new ActivityDispenserLocators();
+        ActivityDef ad = new ActivityDef("write-telemetry",0,1,1,1,0);
+        ActivityDispenser source = dasr.get(ad);
+        assertNotNull(source);
+    }
+
 }

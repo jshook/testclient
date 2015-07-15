@@ -19,8 +19,19 @@
 package com.metawiring.load.core;
 
 import com.codahale.metrics.Counter;
+import com.metawiring.load.activities.ActivityContextAware;
+import com.metawiring.load.activities.RuntimeContext;
+import com.metawiring.load.activities.cql.ActivityContext;
 import com.metawiring.load.activity.*;
+import com.metawiring.load.activity.ActivityDispenserFactory;
+import com.metawiring.load.activity.ActivityDispenserLocators;
+import com.metawiring.load.activity.ActivityDispenser;
+import com.metawiring.load.activity.ActivityHarness;
 import com.metawiring.load.config.ActivityDef;
+import com.metawiring.load.generator.GeneratorInstantiator;
+import com.metawiring.load.generator.RuntimeScope;
+import com.metawiring.load.generator.ScopedCachingGeneratorSource;
+import com.metawiring.load.generator.ScopedGeneratorCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,63 +45,75 @@ import java.util.concurrent.TimeUnit;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+/**
+ * This class should be responsible for running a single activity to completion.
+ */
 public class ActivityExecutorService {
 
     private ExecutionContext context;
     private static Logger logger = LoggerFactory.getLogger(ActivityExecutorService.class);
-    private ActivitySourceResolver activitySourceResolver = new DefaultActivitySourceResolver();
+    private ActivityDispenserFactory activityDispenserFactory = new ActivityDispenserLocators();
 
-    public void execute(ExecutionContext context) {
+    public void prepare(ExecutionContext context) {
         this.context = context;
 
         Counter activityCounter = context.getMetrics().counter(name(ActivityExecutorService.class.getSimpleName(), "activities"));
-
         context.startup();
+    }
+
+    @SuppressWarnings("unchecked")
+    public void execute() {
+
+        ScopedCachingGeneratorSource executionScopedGeneratorCache = new ScopedGeneratorCache(new GeneratorInstantiator(),RuntimeScope.testexecution);
 
         List<ExecutorService> executorServices = new ArrayList<>();
 
-        if (context.getConfig().createSchema) {
+        for (ActivityDef def : context.getConfig().activities) {
+            logger.info("Resolving activity dispenser for " + def);
 
-            for (ActivityDef def : context.getConfig().activities) {
-                logger.info("Creating keyspace and table for activity " + def.getName());
-                Activity activity = activitySourceResolver.get(def).get();
-                activity.init(def.getName(), context);
-                activity.prepare(0, 1, 0);
-                activity.createSchema();
-                activity.cleanup();
+            ScopedCachingGeneratorSource activityScopedGeneratorSource = executionScopedGeneratorCache.EnterSubScope(RuntimeScope.activity);
+
+            ActivityDispenser activityDispenser = activityDispenserFactory.get(def);
+
+            Activity initialActivity = activityDispenser.getNewInstance();
+            Object contextToShare = null;
+            if (initialActivity instanceof ActivityContextAware<?>) {
+                contextToShare = ((ActivityContextAware) initialActivity).createContextToShare(def,activityScopedGeneratorSource,context);
+                ((ActivityContextAware) initialActivity).loadSharedContext(contextToShare); // in case we need to use this for createSchema
             }
-            return;
 
-        } else {
-
-
-            for (ActivityDef def : context.getConfig().activities) {
-                activityCounter.inc();
-
-                logger.info("Resolving activity source for " + def);
-                ActivityInstanceSource activityInstanceSource = activitySourceResolver.get(def);
-
-                ThreadFactory tf = new IndexedThreadFactory(def.toString());
-                ExecutorService executorService = Executors.newFixedThreadPool(context.getConfig().createSchema ? 1 : def.getThreads(), tf);
-                executorServices.add(executorService);
-
-                logger.info("started thread pool " + executorService.toString());
-
-                long threadMaxAsync = (def.getMaxAsync() / def.getThreads());
-                long[] cycleRanges = getCycleRanges(def.getStartCycle(), def.getEndCycle(), def.getThreads());
-                logger.info("Thread cycle ranges: " + Arrays.toString(cycleRanges));
-
-                for (int tidx = 0; tidx < def.getThreads(); tidx++) {
-                    long threadStartCycle = cycleRanges[tidx * 2];
-                    long threadEndCycle = cycleRanges[(tidx * 2) + 1];
-
-                    ActivityHarness activityHarness = new ActivityHarness(activityInstanceSource, context, threadStartCycle, threadEndCycle, threadMaxAsync, def.getInterCycleDelay());
-                    executorService.execute(activityHarness);
-                    logger.info("started activity harness " + tidx + " for " + def + ", cycles: " + activityHarness.getCycleSummary());
-                }
-
-                logger.info("finished scheduling:" + def);
+            // TODO: This is an ugly hack too. Remove it ASAP.
+            if (context.getConfig().createSchema) {
+//                initialActivity.init(def.getName(), context, activityScopedGeneratorSource);
+                initialActivity.prepare(0, 1, 0);
+                initialActivity.createSchema();
+                initialActivity.cleanup();
+                continue;
             }
+
+            ThreadFactory tf = new IndexedThreadFactory(def.toString());
+            ExecutorService executorService = Executors.newFixedThreadPool(context.getConfig().createSchema ? 1 : def.getThreads(), tf);
+            executorServices.add(executorService);
+
+            logger.info("creating shared context for activity " + def.getName());
+            Activity sharedContextCreator = activityDispenser.getNewInstance();
+
+            logger.info("started thread pool " + executorService.toString());
+
+            long threadMaxAsync = (def.getMaxAsync() / def.getThreads());
+            long[] cycleRanges = getCycleRanges(def.getStartCycle(), def.getEndCycle(), def.getThreads());
+            logger.info("Thread cycle ranges: " + Arrays.toString(cycleRanges));
+
+            for (int tidx = 0; tidx < def.getThreads(); tidx++) {
+                long threadStartCycle = cycleRanges[tidx * 2];
+                long threadEndCycle = cycleRanges[(tidx * 2) + 1];
+
+                ActivityHarness activityHarness = new ActivityHarness(activityDispenser, context, activityScopedGeneratorSource, threadStartCycle, threadEndCycle, threadMaxAsync, def.getInterCycleDelay(), (ActivityContext) contextToShare);
+                executorService.execute(activityHarness);
+                logger.info("started activity harness " + tidx + " for " + def + ", cycles: " + activityHarness.getCycleSummary());
+            }
+
+            logger.info("finished scheduling:" + def);
         }
 
         for (ExecutorService executorService : executorServices) {

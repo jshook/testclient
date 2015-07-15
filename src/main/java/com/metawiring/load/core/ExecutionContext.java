@@ -24,8 +24,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ProtocolOptions;
 import com.datastax.driver.core.Session;
 import com.metawiring.load.config.TestClientConfig;
-import com.metawiring.load.generator.GeneratorInstanceSource;
-import com.metawiring.load.generator.GeneratorSourceImpl;
+import com.metawiring.load.generator.*;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -38,7 +37,7 @@ public class ExecutionContext {
     private Session session;
     private MetricRegistry metrics = new MetricRegistry();
     private List<ScheduledReporter> reporters = new ArrayList<ScheduledReporter>();
-    private GeneratorInstanceSource generatorInstanceSource = new GeneratorSourceImpl();
+//    private ScopedCachingGeneratorSource generatorInstanceSource = new ScopedGeneratorCache(new GeneratorInstantiator());
     private long startedAt = System.currentTimeMillis();
     private long endedAt = startedAt;
 
@@ -76,9 +75,9 @@ public class ExecutionContext {
         return session;
     }
 
-    public GeneratorInstanceSource getGeneratorInstanceSource() {
-        return generatorInstanceSource;
-    }
+//    public GeneratorInstanceSource getGeneratorInstanceSource() {
+//        return generatorInstanceSource;
+//    }
 
     public void shutdown() {
 

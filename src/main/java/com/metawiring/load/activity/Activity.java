@@ -18,20 +18,25 @@
 
 package com.metawiring.load.activity;
 
+import com.metawiring.load.activities.RuntimeContext;
 import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.generator.GeneratorInstanceSource;
+import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 /**
  * An activity represents a single type of operation. It may be iterated many times, perhaps even separately
  * in different threads. (non-shared)
+ * @param R - The context type used for this activity.
  */
 public interface Activity {
+
 
     /**
      * Initialize the activity with the name and context.
      * @param name
      * @param context
      */
-    void init(String name, ExecutionContext context);
+//    void init(String name, ExecutionContext context, ScopedCachingGeneratorSource scopedGeneratorSource);
 
     /**
      * Prepare the activity to do work.

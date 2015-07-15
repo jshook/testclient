@@ -20,7 +20,8 @@ package com.metawiring.load.core;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
-import com.metawiring.load.generator.GeneratorBindings;
+import com.metawiring.load.generator.GeneratorBindingList;
+import com.metawiring.load.generator.GeneratorInstanceSource;
 
 /**
  * A class that allows prepared statements and generatorBindings to be bundled together for easy use
@@ -30,22 +31,22 @@ import com.metawiring.load.generator.GeneratorBindings;
 public class ReadyStatement {
     private final long startCycle;
     private final PreparedStatement preparedStatement;
-    private final GeneratorBindings generatorBindings;
+    private final GeneratorBindingList generatorBindingList;
 
-    public ReadyStatement(ExecutionContext context, PreparedStatement preparedStatement, long startCycle) {
+    public ReadyStatement(GeneratorInstanceSource generatorInstanceSource, PreparedStatement preparedStatement, long startCycle) {
         this.preparedStatement = preparedStatement;
-        this.generatorBindings = new GeneratorBindings(context.getGeneratorInstanceSource());
+        this.generatorBindingList = new GeneratorBindingList(generatorInstanceSource);
         this.startCycle = startCycle;
     }
 
     public BoundStatement bind() {
-        Object[] all = generatorBindings.getAll();
+        Object[] all = generatorBindingList.getAll();
         BoundStatement bound = preparedStatement.bind(all);
         return bound;
     }
 
     public void addBinding(String varname, String generatorName) {
-        generatorBindings.bindGenerator(preparedStatement,varname,generatorName, startCycle);
+        generatorBindingList.bindGenerator(preparedStatement,varname,generatorName, startCycle);
     }
 
     public PreparedStatement getPreparedStatement() {

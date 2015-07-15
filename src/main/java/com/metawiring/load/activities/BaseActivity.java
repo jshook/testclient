@@ -21,7 +21,9 @@ package com.metawiring.load.activities;
 import com.metawiring.load.activity.Activity;
 import com.metawiring.load.core.ExecutionContext;
 import com.metawiring.load.core.IndexedThreadFactory;
-import com.metawiring.load.generator.GeneratorBindings;
+import com.metawiring.load.generator.GeneratorBindingList;
+import com.metawiring.load.generator.GeneratorInstanceSource;
+import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -29,13 +31,15 @@ public abstract class BaseActivity implements Activity {
     protected ExecutionContext context;
     protected String activityName;
     protected boolean diagnoseExceptions = true;
+    protected GeneratorInstanceSource generatorInstanceSource;
 
-    @Override
-    public final void init(String activityName, ExecutionContext context) {
-        this.activityName=activityName;
-        this.context = context;
-        this.diagnoseExceptions = context.getConfig().diagnoseExceptions;
-    }
+//    @Override
+//    public final void init(String activityName, ExecutionContext context, ScopedCachingGeneratorSource generatorInstanceSource) {
+//        this.activityName=activityName;
+//        this.context = context;
+//        this.diagnoseExceptions = context.getConfig().diagnoseExceptions;
+//        this.generatorInstanceSource = generatorInstanceSource;
+//    }
 
     @Override
     public void cleanup() { }
@@ -62,8 +66,8 @@ public abstract class BaseActivity implements Activity {
         }
     }
 
-    protected GeneratorBindings createGeneratorBindings() {
-        return new GeneratorBindings(context.getGeneratorInstanceSource());
+    protected GeneratorBindingList createGeneratorBindings() {
+        return new GeneratorBindingList(generatorInstanceSource);
     }
 
 }

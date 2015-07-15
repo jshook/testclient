@@ -18,19 +18,15 @@
 
 package com.metawiring.load.activity;
 
-import com.metawiring.load.config.ActivityDef;
-import org.testng.annotations.Test;
+/**
+ * Provides instances of Activities. This allows for customization of activity scope when needed.
+ * The Activity itself is meant to be executable.
+ */
+public interface ActivityDispenser<A extends Activity> {
 
-import static org.testng.Assert.*;
+    A getNewInstance();
 
-public class DefaultActivitySourceResolverTest {
+    String getName();
 
-    @Test
-    public void testGetResolvesYamlSource() throws Exception {
-        DefaultActivitySourceResolver dasr = new DefaultActivitySourceResolver();
-        ActivityDef ad = new ActivityDef("write-telemetry",0,1,1,1,0);
-        ActivityInstanceSource source = dasr.get(ad);
-        assertNotNull(source);
-    }
-
+    String getActivityName();
 }

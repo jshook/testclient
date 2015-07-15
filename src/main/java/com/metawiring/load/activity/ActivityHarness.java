@@ -19,7 +19,10 @@
 package com.metawiring.load.activity;
 
 import com.codahale.metrics.Counter;
+import com.metawiring.load.activities.ActivityContextAware;
+import com.metawiring.load.activities.cql.ActivityContext;
 import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,25 +35,33 @@ public class ActivityHarness implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(ActivityHarness.class);
 
-    private final ActivityInstanceSource ActivityInstanceSource;
+    private final ActivityDispenser activityDispenser;
     private final ExecutionContext context;
     private final long startCycle, endCycle, maxAsync, interCycleDelay;
+    private final ScopedCachingGeneratorSource scopedGeneratorSource;
+    private final ActivityContext activityContext;
 
-    public ActivityHarness(ActivityInstanceSource ActivityInstanceSource, ExecutionContext context, long startCycle, long endCycle, long maxAsync, int interCycleDelay) {
-        this.ActivityInstanceSource = ActivityInstanceSource;
+    public ActivityHarness(ActivityDispenser ActivityDispenser, ExecutionContext context, ScopedCachingGeneratorSource scopedGeneratorSource, long startCycle, long endCycle, long maxAsync, int interCycleDelay, ActivityContext activityContext) {
+        this.activityDispenser = ActivityDispenser;
         this.context = context;
         this.startCycle = startCycle;
         this.endCycle = endCycle;
         this.maxAsync = maxAsync;
         this.interCycleDelay = interCycleDelay;
+        this.scopedGeneratorSource = scopedGeneratorSource;
+        this.activityContext = activityContext;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void run() {
 
-        Activity activity = ActivityInstanceSource.get();
+        Activity activity = activityDispenser.getNewInstance();
+        if (activity instanceof ActivityContextAware) {
+            ((ActivityContextAware) activity).loadSharedContext(activityContext);
+        }
 
-        activity.init(ActivityInstanceSource.getActivityName(), context);
+//        activity.init(activityDispenser.getActivityName(), context, scopedGeneratorSource);
         activity.prepare(startCycle, endCycle, maxAsync);
 
         Counter cycleCounter = context.getMetrics().counter(name(activity.getClass().getSimpleName(), "cycles"));
@@ -68,7 +79,7 @@ public class ActivityHarness implements Runnable {
                     // It's not worth it
                 }
             }
-        } else { // Hedge against the try catch
+        } else { // Hedge against the try catch performance
             for (long cycle = startCycle; cycle < endCycle; cycle++) {
                 cycleCounter.inc();
                 activity.iterate();
@@ -85,7 +96,7 @@ public class ActivityHarness implements Runnable {
 
     public String toString() {
         return getClass().getSimpleName()
-                + " activitySource:" + ActivityInstanceSource
+                + " activitySource:" + activityDispenser
                 + ", startCycle:" + startCycle
                 + ", endCycle:" + endCycle
                 + ", maxAsync:" + maxAsync;

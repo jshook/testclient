@@ -33,18 +33,19 @@ public class GeneratorSourceImpl implements GeneratorInstanceSource {
     private Map<String,GeneratorFactory> genFacts = new HashMap<String,GeneratorFactory>() {{
 
         put("threadnum",new GeneratorInstanceFactory("ThreadNumGenerator"));
-        put("namednum:1M", new GeneratorInstanceFactory("NamedNumberGenerator:1000000"));
+        put("date-epoch-hour", new GeneratorInstanceFactory("DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH"));
+        put("varnames", new GeneratorInstanceFactory("LineExtractGenerator:data/variable_words.txt"));
         put("datesecond",new GeneratorInstanceFactory("DateSequenceGenerator:1000"));
+        put("loremipsum:100:200", new GeneratorInstanceFactory("LoremExtractGenerator:100:200"));
+        put("cycle", new GeneratorInstanceFactory("CycleNumberGenerator"));
+
+        put("namednum:1M", new GeneratorInstanceFactory("NamedNumberGenerator:1000000"));
         put("loremipsum:10:20", new GeneratorInstanceFactory("LoremExtractGenerator:10:20"));
         put("loremipsum:10:12", new GeneratorInstanceFactory("LoremExtractGenerator:10:12"));
-        put("loremipsum:100:200", new GeneratorInstanceFactory("LoremExtractGenerator:100:200"));
 
-        put("varnames", new GeneratorInstanceFactory("LineExtractGenerator:data/variable_words.txt"));
         put("types5mod", new GeneratorInstanceFactory(LineExtractModGenerator.class, "data/types5.txt"));
         put("types5", new GeneratorInstanceFactory("LineExtractGenerator:types5.txt"));
 
-        put("date-epoch-hour", new GeneratorInstanceFactory("DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH"));
-        put("cycle", new GeneratorInstanceFactory("CycleNumberGenerator"));
 
         put("longdiv4", new GeneratorInstanceFactory("LongDivSequenceGenerator:4"));
         put("longdiv5", new GeneratorInstanceFactory("LongDivSequenceGenerator:5"));

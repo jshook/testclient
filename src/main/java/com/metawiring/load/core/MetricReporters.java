@@ -33,6 +33,8 @@ public class MetricReporters {
     private final static Logger logger = LoggerFactory.getLogger(MetricReporters.class);
     private static MetricReporters instance = new MetricReporters();
 
+
+    private List<MetricRegistry> metricRegistries = new ArrayList<>();
     private List<ScheduledReporter> scheduledReporters = new ArrayList<>();
 
     private MetricReporters() {
@@ -42,17 +44,29 @@ public class MetricReporters {
         return instance;
     }
 
-    public MetricReporters addGraphite(MetricRegistry registry, String host, int graphitePort, String prefix) {
+    public MetricReporters addRegistry(MetricRegistry metricsRegistry) {
+        this.metricRegistries.add(metricsRegistry);
+        return this;
+    }
 
-        Graphite graphite = new Graphite(new InetSocketAddress(host, graphitePort));
-        GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(registry)
-                .prefixedWith(prefix)
-                .convertRatesTo(TimeUnit.SECONDS)
-                .convertDurationsTo(TimeUnit.MILLISECONDS)
-                .filter(MetricFilter.ALL)
-                .build(graphite);
+    public MetricReporters addGraphite(String host, int graphitePort, String prefix) {
 
-        scheduledReporters.add(graphiteReporter);
+        if (metricRegistries.isEmpty()) {
+            throw new RuntimeException("There are no metric registries.");
+        }
+
+        for (MetricRegistry metricRegistry : metricRegistries) {
+
+            Graphite graphite = new Graphite(new InetSocketAddress(host, graphitePort));
+            GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(metricRegistry)
+                    .prefixedWith(prefix)
+                    .convertRatesTo(TimeUnit.SECONDS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
+                    .filter(MetricFilter.ALL)
+                    .build(graphite);
+
+            scheduledReporters.add(graphiteReporter);
+        }
         return this;
     }
 
@@ -68,13 +82,21 @@ public class MetricReporters {
 //    }
 
     public MetricReporters addLogger(MetricRegistry registry) {
-        Slf4jReporter loggerReporter = Slf4jReporter.forRegistry(registry)
-                .convertRatesTo(TimeUnit.SECONDS)
-                .convertDurationsTo(TimeUnit.MILLISECONDS)
-                .filter(MetricFilter.ALL)
-                .outputTo(logger)
-                .build();
-        scheduledReporters.add(loggerReporter);
+
+        if (metricRegistries.isEmpty()) {
+            throw new RuntimeException("There are no metric registries.");
+        }
+
+        for (MetricRegistry metricRegistry : metricRegistries) {
+
+            Slf4jReporter loggerReporter = Slf4jReporter.forRegistry(registry)
+                    .convertRatesTo(TimeUnit.SECONDS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
+                    .filter(MetricFilter.ALL)
+                    .outputTo(logger)
+                    .build();
+            scheduledReporters.add(loggerReporter);
+        }
         return this;
     }
 

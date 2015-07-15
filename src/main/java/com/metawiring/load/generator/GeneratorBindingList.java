@@ -35,8 +35,8 @@ import java.util.List;
  * is bound to it are managed by the client object. This simply provides
  * a clean and reusable way to manage such generatorBindings.
  */
-public class GeneratorBindings {
-    private final static Logger logger = LoggerFactory.getLogger(GeneratorBindings.class);
+public class GeneratorBindingList {
+    private final static Logger logger = LoggerFactory.getLogger(GeneratorBindingList.class);
 
     private boolean trace=false;
     private final GeneratorInstanceSource instanceSource;
@@ -44,7 +44,7 @@ public class GeneratorBindings {
     private List<Generator> generatorList = new ArrayList<Generator>();
     private Object all;
 
-    public GeneratorBindings(GeneratorInstanceSource instanceSource) {
+    public GeneratorBindingList(GeneratorInstanceSource instanceSource) {
         this.instanceSource = instanceSource;
     }
 

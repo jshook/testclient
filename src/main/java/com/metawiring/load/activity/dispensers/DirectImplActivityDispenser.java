@@ -16,25 +16,27 @@
  *
  */
 
-package com.metawiring.load.activity;
+package com.metawiring.load.activity.dispensers;
 
+import com.metawiring.load.activity.Activity;
+import com.metawiring.load.activity.ActivityDispenser;
 import org.apache.commons.lang3.reflect.ConstructorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DefaultActivityInstanceSource implements ActivityInstanceSource {
-    private final static Logger logger = LoggerFactory.getLogger(DefaultActivityInstanceSource.class);
+public class DirectImplActivityDispenser implements ActivityDispenser {
+    private final static Logger logger = LoggerFactory.getLogger(DirectImplActivityDispenser.class);
 
     private Class<? extends Activity> activityClass;
     private String activityName;
 
-    public DefaultActivityInstanceSource(Class<? extends Activity> activityClass, String activityName) {
+    public DirectImplActivityDispenser(String activityName, Class<? extends Activity> activityClass) {
         this.activityClass = activityClass;
         this.activityName = activityName;
     }
 
     @SuppressWarnings("unchecked")
-    public DefaultActivityInstanceSource(String activityClassName, String activityName) {
+    public DirectImplActivityDispenser(String activityClassName, String activityName) {
         try {
             this.activityClass = (Class<? extends Activity>) Class.forName(activityClassName);
             this.activityName = activityName;
@@ -45,7 +47,7 @@ public class DefaultActivityInstanceSource implements ActivityInstanceSource {
     }
 
     @Override
-    public Activity get() {
+    public Activity getNewInstance() {
         Activity activity;
         try {
             activity = (Activity) ConstructorUtils.invokeConstructor(activityClass, new Object[]{});

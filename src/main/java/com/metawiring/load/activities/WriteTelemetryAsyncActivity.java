@@ -22,7 +22,7 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
 import com.datastax.driver.core.*;
-import com.metawiring.load.generator.GeneratorBindings;
+import com.metawiring.load.generator.GeneratorBindingList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +55,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity {
     private int pendingRq = 0;
 
     private long maxAsync = 0l;
-    private GeneratorBindings generatorBindings;
+    private GeneratorBindingList generatorBindingList;
 
     private class TimedResultSetFuture {
         ResultSetFuture rsFuture;
@@ -118,13 +118,13 @@ public class WriteTelemetryAsyncActivity extends BaseActivity {
 
         // The names are not used as actual parameters for now, but hopefully will later
         // At least they are useful for diagnosing generator behavior
-        generatorBindings = createGeneratorBindings();
-        generatorBindings.bindGenerator(addTelemetryStmt, SOURCE_FIELD, "threadnum");
-        generatorBindings.bindGenerator(addTelemetryStmt, EPOCH_HOUR_FIELD, "date-epoch-hour", startCycle);
-        generatorBindings.bindGenerator(addTelemetryStmt, PARAM_FIELD, "varnames");
-        generatorBindings.bindGenerator(addTelemetryStmt, TIMESTAMP_FIELD, "datesecond", startCycle);
-        generatorBindings.bindGenerator(addTelemetryStmt, DATA_FIELD, "loremipsum:100:200");
-        generatorBindings.bindGenerator(addTelemetryStmt, CYCLE_FIELD, "cycle", startCycle);
+        generatorBindingList = createGeneratorBindings();
+        generatorBindingList.bindGenerator(addTelemetryStmt, SOURCE_FIELD, "threadnum");
+        generatorBindingList.bindGenerator(addTelemetryStmt, EPOCH_HOUR_FIELD, "date-epoch-hour", startCycle);
+        generatorBindingList.bindGenerator(addTelemetryStmt, PARAM_FIELD, "varnames");
+        generatorBindingList.bindGenerator(addTelemetryStmt, TIMESTAMP_FIELD, "datesecond", startCycle);
+        generatorBindingList.bindGenerator(addTelemetryStmt, DATA_FIELD, "loremipsum:100:200");
+        generatorBindingList.bindGenerator(addTelemetryStmt, CYCLE_FIELD, "cycle", startCycle);
 
     }
 
@@ -177,7 +177,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity {
             try {
 
                 TimedResultSetFuture trsf = new TimedResultSetFuture();
-                trsf.boundStatement = addTelemetryStmt.bind(generatorBindings.getAll());
+                trsf.boundStatement = addTelemetryStmt.bind(generatorBindingList.getAll());
                 trsf.timerContext = timerOps.time();
                 trsf.rsFuture = session.executeAsync(trsf.boundStatement);
                 trsf.tries++;

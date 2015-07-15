@@ -7,11 +7,11 @@
     </layout>
   </appender>
 
-  <logger name="org.hibernate" level="WARN"/>
-  <logger name="com.metawiring.load" level="TRACE"/>
-  <logger name="com.datastax.driver" level="INFO"/>
+  <logger name="org.hibernate" specificity="WARN"/>
+  <logger name="com.metawiring.load" specificity="TRACE"/>
+  <logger name="com.datastax.driver" specificity="INFO"/>
 
-  <root level="trace">
+  <root specificity="trace">
     <appender-ref ref="STDOUT" />
   </root>
 

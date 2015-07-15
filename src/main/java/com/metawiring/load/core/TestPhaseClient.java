@@ -42,19 +42,27 @@ public class TestPhaseClient implements Callable<Result> {
         MetricRegistry metrics = context.getMetrics();
         MetricReporters reporters = MetricReporters.getInstance();
         TestClientConfig config = context.getConfig();
-        reporters.addLogger(metrics);
 
+
+        ActivityExecutorService executorService = new ActivityExecutorService();
+        logger.info("Executing main client logic");
+        executorService.prepare(context);
+
+        // TODO: Carve the metrics wiring out into something that is easier to manage and integrate. It puts too much noise here.
+
+        // Registries come before reporters
+        reporters.addRegistry(context.getSession().getCluster().getMetrics().getRegistry());
+        reporters.addRegistry(metrics);
+        reporters.addLogger(metrics);
         if (config.graphiteHost != null && !config.graphiteHost.isEmpty()) {
             logger.info("Adding graphite reporter: host="
                     + config.graphiteHost + ":" + config.graphitePort
                     + " with prefix: " + config.metricsPrefix);
-            reporters.addGraphite(metrics, config.graphiteHost, config.graphitePort, config.metricsPrefix);
+            reporters.addGraphite(config.graphiteHost, config.graphitePort, config.metricsPrefix);
         }
         reporters.start();
 
-        ActivityExecutorService executor = new ActivityExecutorService();
-        logger.info("Executing main client logic");
-        executor.execute(context);
+        executorService.execute();
         logger.info("Finished executing main client logic");
         Result result = new Result(context);
         context.shutdown();

@@ -27,15 +27,15 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
-public class GeneratorInstanceFactory implements GeneratorFactory {
+public class GeneratorInstanceFactory<T> implements GeneratorFactory<T> {
     private final static Logger logger = LoggerFactory.getLogger(GeneratorInstanceFactory.class);
 
     private final String generatorSpec;
 
-    private Class<?> generatorClass;
+    private Class<Generator<T>> generatorClass;
+    private Generator<T> theSharedInstance = null;
     private Object[] generatorArgs;
     private boolean isSharedInstance = false;
-    private Generator<?> theSharedInstance = null;
 
     public GeneratorInstanceFactory(String generatorSpec) {
         this.generatorSpec = generatorSpec;
@@ -73,16 +73,16 @@ public class GeneratorInstanceFactory implements GeneratorFactory {
     // TODO: Investigate issues with apache instantiation of classes with some static logic
     // when this method is not synchronized
     @Override
-    public synchronized Generator getGenerator() {
+    public synchronized Generator<T> getGenerator() {
 
         if (isSharedInstance && theSharedInstance != null) {
             return theSharedInstance;
         }
 
-        generatorClass = getGeneratorClass(generatorSpec);
+        generatorClass = (Class<Generator<T>>) getGeneratorClass(generatorSpec);
 
         try {
-            Generator<?> generator = (Generator<?>) ConstructorUtils.invokeConstructor(generatorClass, generatorArgs);
+            Generator<T> generator = ConstructorUtils.invokeConstructor(generatorClass, generatorArgs);
             if (isSharedInstance) {
                 theSharedInstance = generator;
                 return theSharedInstance;
@@ -95,7 +95,7 @@ public class GeneratorInstanceFactory implements GeneratorFactory {
 
     }
 
-    private Class<?> getGeneratorClass(String generatorSpec) {
+    private Class<Generator<T>> getGeneratorClass(String generatorSpec) {
         if (generatorClass == null) {
             synchronized (this) {
                 if (generatorClass != null) {
@@ -108,7 +108,7 @@ public class GeneratorInstanceFactory implements GeneratorFactory {
                 }
 
                 try {
-                    generatorClass = Class.forName(className);
+                    generatorClass = (Class<Generator<T>>) Class.forName(className);
                     logger.info("Initialized class:" + generatorClass.getSimpleName() + " for generator type: " + generatorSpec);
                 } catch (ClassNotFoundException e) {
                     logger.error("Unable to map generator class " + generatorSpec + " for " + getClass().getSimpleName());

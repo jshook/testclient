@@ -48,38 +48,4 @@ public class YamlActivityDef {
         return ddl;
     }
 
-    public static class StatementDef {
-        public String name="";
-        public String cql="";
-        public Map<String,String> bindings = new HashMap<String,String>();
-        private String[] bindNames;
-
-        Pattern bindableRegex = Pattern.compile("<<(\\w+)>>");
-        /**
-         * @return bindableNames in order as specified in the parameter placeholders
-         */
-        public List<String> getBindNames() {
-            Matcher m = bindableRegex.matcher(cql);
-            List<String> bindNames = new ArrayList<>();
-            while (m.find()) {
-                bindNames.add(m.group(1));
-            }
-            return bindNames;
-        }
-
-        /**
-         * @return CQL statement with '?' in place of the bindable parameters, suitable for preparing
-         */
-        public String getCookedStatement(TestClientConfig config) {
-            String statement = cql;
-            statement = statement.replaceAll("<<KEYSPACE>>", config.keyspace);
-            statement = statement.replaceAll("<<TABLE>>", config.table);
-            statement = statement.replaceAll("<<RF>>", String.valueOf(config.defaultReplicationFactor));
-            statement = statement.replaceAll("<<\\w+>>","?");
-            return statement;
-        }
-    }
-
-
-
 }

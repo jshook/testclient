@@ -28,18 +28,6 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.*;
 
 @Test
-public class YamlConfigurableActivityTest {
+public class CQLYamlActivityTest {
 
-    @Test
-    public void testYamlConfigurableActivityLoadsOnInit() {
-        ExecutionContext c = mock(ExecutionContext.class);
-        TestClientConfig conf = TestClientConfig.builder().build();
-        when(c.getConfig()).thenReturn(conf);
-
-        YamlConfigurableActivity activity = new YamlConfigurableActivity();
-        activity.init("write-telemetry",c);
-        YamlActivityDef ad = activity.getYamlActivityDef();
-        assertNotNull(ad);
-
-    }
 }

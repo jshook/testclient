@@ -18,14 +18,21 @@
 
 package com.metawiring.load.activity;
 
+import com.metawiring.load.activities.ActivityType;
+import com.metawiring.load.activities.RuntimeContext;
+import com.metawiring.load.activity.ActivityDispenser;
+import com.metawiring.load.config.ActivityDef;
+
+import java.util.Optional;
+
 /**
- * Provides instances of Activities. This allows for customization of activity scope when needed.
+ * This is how we find activities in the system.
  */
-public interface ActivityInstanceSource {
+public interface ActivityDispenserLocator {
+    /**
+     * If possible, create an activity dispenser that knows how to create Activities,
+     * honoring the scoping rules
+     */
+    Optional<? extends ActivityDispenser> resolve(ActivityDef activityDef);
 
-    Activity get();
-
-    String getName();
-
-    String getActivityName();
 }
