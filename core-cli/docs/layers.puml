@@ -1,0 +1,34 @@
+@startuml
+
+
+par RunState as RS
+control TestRun as R
+control Phase as P
+control Activity as A
+control Thread as T
+
+loop foreach phase
+create P
+R -> P:
+R -> P: run phase
+
+  loop foreach activity
+    P -> A: run activity
+
+    loop foreach thread
+      A -> T: start thread
+    end foreach thread
+
+  end foreach activity
+
+  loop foreach activity
+    loop foreach thread
+      T -> A: thread complete
+    end foreach thread
+    A -> P: activity complete
+  end foreach activity
+
+P -> R: phase complete
+end foreach phase
+
+@enduml

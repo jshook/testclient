@@ -1,0 +1,30 @@
+name: multi-stage-workload
+desc: >
+  This test runs in multiple phases. Phase 1 is bulk loading telemetry with a monotonically increasing timestamp.
+  Phase 2 adds warm reads against recently written rows. Phase 3 adds cold reads against cold data.
+
+phases:
+
+# phase 1, telemetry writes
+- name: write-telemetry
+  activitydefs:
+  - spec: write-telemetry:1E9:900:1800
+
+# phase 2, telemetry writes and warm reads
+- name: write-read-telemetry
+  activitydefs:
+  - name: write-telemetry
+    source: write-telemetry.cql.yaml
+    cycles: 1..1E9
+    threads: 900
+    async: 1800
+    delay: 0
+  - spec: read-warm-telemetry:read-telemetry.cql.yaml:1..1E8:100:200:0
+
+# phase 3, telemetry writes, warm reads, and cold reads
+- name: write-read-cold-telemetry
+  activitydefs:
+  - spec: write-telemetry:1E9:900:1800
+  - spec: read-warm-telemetry:read-telemetry.cql.yaml:1..1E8:100:200:0
+  - spec: read-cold-telemetry:read-cold-telemetry.cql.yaml:1..1E7:10:20:0
+
