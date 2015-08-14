@@ -35,10 +35,26 @@ public class ParameterMap {
         }
         return defaultLongValue;
     }
+    public Long takeLongOrDefault(String paramName, Long defaultLongValue) {
+        Optional<String> l = Optional.ofNullable(paramMap.get(paramName));
+        if (l.isPresent()) {
+            paramMap.remove(paramName);
+            return Long.valueOf(l.get());
+        }
+        return defaultLongValue;
+    }
 
     public Double getDoubleOrDefault(String paramName, double defaultDoubleValue) {
         Optional<String> d = Optional.ofNullable(paramMap.get(paramName));
         if (d.isPresent()) {
+            return Double.valueOf(d.get());
+        }
+        return defaultDoubleValue;
+    }
+    public Double takeDoubleOrDefault(String paramName, double defaultDoubleValue) {
+        Optional<String> d = Optional.ofNullable(paramMap.get(paramName));
+        if (d.isPresent()) {
+            paramMap.remove(paramName);
             return Double.valueOf(d.get());
         }
         return defaultDoubleValue;
@@ -48,6 +64,28 @@ public class ParameterMap {
         Optional<String> s = Optional.ofNullable(paramMap.get(paramName));
         return s.orElse(defaultStringValue);
     }
+    public String takeStringOrDefault(String paramName, String defaultStringValue) {
+        Optional<String> s = Optional.ofNullable(paramMap.get(paramName));
+        if (s.isPresent()) { paramMap.remove(paramName); }
+        return s.orElse(defaultStringValue);
+    }
+
+    public int getIntOrDefault(String paramName, int paramDefault) {
+        Optional<String> i = Optional.ofNullable(paramMap.get(paramName));
+        if (i.isPresent()) {
+            return Integer.valueOf(i.get());
+        }
+        return paramDefault;
+    }
+    public int takeIntOrDefault(String paramName, int paramDefault) {
+        Optional<String> i = Optional.ofNullable(paramMap.get(paramName));
+        if (i.isPresent()) {
+            paramMap.remove(paramName);
+            return Integer.valueOf(i.get());
+        }
+        return paramDefault;
+    }
+
 
     private static Pattern encodedParamsPattern = Pattern.compile("(\\w+?)=(.+);");
 
@@ -95,4 +133,5 @@ public class ParameterMap {
     public int size() {
         return paramMap.size();
     }
+
 }

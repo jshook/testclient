@@ -21,9 +21,12 @@ package com.metawiring.load.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * A definition for an activity.
@@ -60,6 +63,19 @@ public class ActivityDef {
         this.paramMap = parameterMap.orElse(null);
     }
 
+    public ActivityDef(ParameterMap parameterMap) {
+        this(
+                parameterMap.getStringOrDefault("name", "unnamed-activity"),
+                parameterMap.getStringOrDefault("source", "unknown-source"),
+                parameterMap.getLongOrDefault("startcycle", 1l),
+                parameterMap.getLongOrDefault("endcycle", 1l),
+                parameterMap.getIntOrDefault("threads", 1),
+                parameterMap.getIntOrDefault("async",1),
+                parameterMap.getIntOrDefault("delay",0),
+                Optional.ofNullable(parameterMap)
+        );
+    }
+
     /**
      * @param namedActivitySpec - namedActivitySpec name in one of the formats:
      * <UL>
@@ -68,35 +84,41 @@ public class ActivityDef {
      * <LI>activityClass:cycles:threads</LI>
      * <LI>activityClass:cycles:threads:maxAsync/LI>
      * </UL>
-     * where cycles may be either M or N..M
-     * N implicitly represent 1..M
+     * <p>where cycles may be either M or N..M</p>
+     * <p>M implicitly represent 1..M</p>
+     * <p>Any of these patterns may be followed or replace by a name=value;... form. They are internally anyway.</p>
      */
 
     // NOTE: To use this regex naming scheme, every group which is not named must be a non-capturing group, so
     // group names and capturing groups match up pair-wise. See the supporting getNamedGroupCandidates(...) helper method below.
 
-    private static Pattern argPattern =
-            Pattern.compile(
-                    "(\\w+?)=(.+?);", Pattern.COMMENTS
-            );
-    private static Pattern argsPattern =
-            Pattern.compile("(?<args>(" + argPattern + ")+)?");
-
-
-    private static Pattern activityPattern =
+    private static Pattern shortPattern =
             Pattern.compile(
                     "^"
-                            + "(?<names> (?: (?<name>[a-zA-Z\\.\\-]*?) (?::)? ) (?<source>\\w*?)) "
-                            + "(?<cyc>: (?: (?<cstart>\\d+? ) (?:\\.\\.)? )? (?<cstop>\\d+?) )?"
-                            + "(?: (?::) (?<threads>\\d+?) )?"
-                            + "(?: (?::) (?<async>\\d+?) )?"
-                            + "(?: (?::) (?<delay>\\d+?) )?"
-                            + "(?: (?:[,:]) " + argsPattern + ")?"
+                            + "(?<name>[a-zA-Z\\.-_]+)?:?"
+                            + "(?<source>[a-zA-Z\\.-_\\\\]+)?:?"
+                            + "(?<cyc>: (?: (?<startcycle>\\d+? ) (?:\\.\\.)? )? (?<endcycle>\\d+?) )?:?"
+                            + "(?<threads>\\d+?)?:?"
+                            + "(?<async>\\d+?)?:?"
+                            + "(?<delay>\\d+?)?:?"
                             + "$", Pattern.COMMENTS
             );
+    private static List<String> shortPatternNames = getNamedGroupCandidates(shortPattern.pattern());
 
+    private static Pattern argsPattern =
+            Pattern.compile(
+                    "((\\w+?)=(.+?);)*", Pattern.COMMENTS
+            );
 
-    private static List<String> groupNames = getNamedGroupCandidates(activityPattern.pattern());
+    private static Pattern fullPattern =
+            Pattern.compile(
+                    "^"
+                            + "(?<shortForm>" + shortPattern + ")?"
+                            + "(?:[,:])?"
+                            + "(?<argsForm>" + argsPattern + ")?"
+                            + "$", Pattern.COMMENTS
+            );
+    private static List<String> fullPatternGroups = getNamedGroupCandidates(fullPattern.pattern());
 
     public static Optional<ActivityDef> parseActivityDefOptionally(String namedActivitySpec) {
         try {
@@ -109,8 +131,9 @@ public class ActivityDef {
 
     public static ActivityDef parseActivityDef(String namedActivitySpec) {
 
-        Matcher matcher = activityPattern.matcher(namedActivitySpec);
-        if (!matcher.matches()) {
+        Matcher fullMatcher = fullPattern.matcher(namedActivitySpec);
+
+        if (!fullMatcher.matches()) {
             throw new RuntimeException("Unable to parse named activity spec:" + namedActivitySpec);
         }
 //        else {
@@ -120,28 +143,28 @@ public class ActivityDef {
 //            System.out.println("matched!");
 //        }
 
-        Optional<String> name = Optional.ofNullable(matcher.group("name"));
-        Optional<String> source = Optional.ofNullable(matcher.group("source"));
-        Optional<String> cstart = Optional.ofNullable(matcher.group("cstart"));
-        Optional<String> cstop = Optional.ofNullable(matcher.group("cstop"));
-        Optional<String> threads = Optional.ofNullable(matcher.group("threads"));
-        Optional<String> async = Optional.ofNullable(matcher.group("async"));
-        Optional<String> delay = Optional.ofNullable(matcher.group("delay"));
-        Optional<String> args = Optional.ofNullable(matcher.group("args"));
+        Optional<String> shortForm = Optional.ofNullable(fullMatcher.group("shortForm"));
+        Optional<String> argsForm = Optional.ofNullable(fullMatcher.group("argsForm"));
+        String allArgs = argsForm.orElse("");
 
-        Optional<ParameterMap> optionalParameterMap = ParameterMap.parseOptionalParams(args);
+        if (shortForm.isPresent()) {
 
-        ActivityDef activityDef = new ActivityDef(
-                name.orElse("unnamed-activity"),
-                source.orElse(name.orElse("unnamed-source")),
-                Long.valueOf(cstart.orElse("1")),
-                Long.valueOf(cstop.orElse("1")),
-                Integer.valueOf(threads.orElse("1")),
-                Integer.valueOf(async.orElse("1")),
-                Integer.valueOf(delay.orElse("0")),
-                optionalParameterMap
-        );
+            Matcher shortFormMatcher = shortPattern.matcher(shortForm.get());
+            if (!shortFormMatcher.matches()) {
+                throw new RuntimeException("Unable to parse named activity spec short form:" + shortForm.get());
+            }
+
+            allArgs +=
+                    shortPatternNames.stream()
+                            .filter(s -> Optional.ofNullable(shortFormMatcher.group(s)).isPresent())
+                            .map(v -> v + "=" + shortFormMatcher.group(v) + ";")
+                            .collect(Collectors.joining());
+        }
+
+        ParameterMap activityParameterMap = ParameterMap.parseOrException(allArgs);
+        ActivityDef activityDef = new ActivityDef(activityParameterMap);
         return activityDef;
+
     }
 
     private static List<String> getNamedGroupCandidates(String regex) {
