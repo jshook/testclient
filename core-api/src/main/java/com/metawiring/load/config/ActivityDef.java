@@ -22,11 +22,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A definition for an activity.
@@ -47,18 +49,16 @@ public class ActivityDef {
     public ActivityDef(
             String name,
             String source,
-            long startCycle,
-            long endCycle,
+            String cycles,
             int threads,
             int maxAsync,
             int interCycleDelay,
             Optional<ParameterMap> parameterMap) {
         this.name = name;
         this.source = source;
+        setCycles(cycles);
         this.threads = threads;
         this.maxAsync = maxAsync;
-        this.startCycle = startCycle;
-        this.endCycle = endCycle;
         this.interCycleDelay = interCycleDelay;
         this.paramMap = parameterMap.orElse(null);
     }
@@ -67,59 +67,59 @@ public class ActivityDef {
         this(
                 parameterMap.getStringOrDefault("name", "unnamed-activity"),
                 parameterMap.getStringOrDefault("source", "unknown-source"),
-                parameterMap.getLongOrDefault("startcycle", 1l),
-                parameterMap.getLongOrDefault("endcycle", 1l),
+                parameterMap.getStringOrDefault("cycles", "1"),
                 parameterMap.getIntOrDefault("threads", 1),
-                parameterMap.getIntOrDefault("async",1),
-                parameterMap.getIntOrDefault("delay",0),
+                parameterMap.getIntOrDefault("async", 1),
+                parameterMap.getIntOrDefault("delay", 0),
                 Optional.ofNullable(parameterMap)
         );
     }
 
     /**
      * @param namedActivitySpec - namedActivitySpec name in one of the formats:
-     * <UL>
-     * <LI>activityClass</LI>
-     * <LI>activityClass:cycles</LI>
-     * <LI>activityClass:cycles:threads</LI>
-     * <LI>activityClass:cycles:threads:maxAsync/LI>
-     * </UL>
-     * <p>where cycles may be either M or N..M</p>
-     * <p>M implicitly represent 1..M</p>
-     * <p>Any of these patterns may be followed or replace by a name=value;... form. They are internally anyway.</p>
+     *                          <UL>
+     *                          <LI>activityClass</LI>
+     *                          <LI>activityClass:cycles</LI>
+     *                          <LI>activityClass:cycles:threads</LI>
+     *                          <LI>activityClass:cycles:threads:maxAsync/LI>
+     *                          </UL>
+     *                          <p>where cycles may be either M or N..M</p>
+     *                          <p>M implicitly represent 1..M</p>
+     *                          <p>Any of these patterns may be followed or replace by a name=value;... form. They are internally anyway.</p>
      */
 
     // NOTE: To use this regex naming scheme, every group which is not named must be a non-capturing group, so
     // group names and capturing groups match up pair-wise. See the supporting getNamedGroupCandidates(...) helper method below.
 
-    private static Pattern shortPattern =
-            Pattern.compile(
-                    "^"
-                            + "(?<name>[a-zA-Z\\.-_]+)?:?"
-                            + "(?<source>[a-zA-Z\\.-_\\\\]+)?:?"
-                            + "(?<cyc>: (?: (?<startcycle>\\d+? ) (?:\\.\\.)? )? (?<endcycle>\\d+?) )?:?"
-                            + "(?<threads>\\d+?)?:?"
-                            + "(?<async>\\d+?)?:?"
-                            + "(?<delay>\\d+?)?:?"
-                            + "$", Pattern.COMMENTS
-            );
-    private static List<String> shortPatternNames = getNamedGroupCandidates(shortPattern.pattern());
-
-    private static Pattern argsPattern =
-            Pattern.compile(
-                    "((\\w+?)=(.+?);)*", Pattern.COMMENTS
-            );
-
-    private static Pattern fullPattern =
-            Pattern.compile(
-                    "^"
-                            + "(?<shortForm>" + shortPattern + ")?"
-                            + "(?:[,:])?"
-                            + "(?<argsForm>" + argsPattern + ")?"
-                            + "$", Pattern.COMMENTS
-            );
-    private static List<String> fullPatternGroups = getNamedGroupCandidates(fullPattern.pattern());
-
+//    private static Pattern shortPattern =
+//            Pattern.compile(
+//                     "(?<name>[a-zA-Z-_]+)?:?"
+//                            + "(?<source>[a-zA-Z-_/]+)?:?"
+//                            + "(?<startcycle>\\d+?)"
+//                            + "(?:\\.\\.)? (?<endcycle>\\d+?) "
+//                            + "(?<threads>\\d+?)?:?"
+//                            + "(?<async>\\d+?)?:?"
+//                            + "(?<delay>\\d+?)?:?"
+//                            ,Pattern.COMMENTS
+//            );
+//    private static Pattern shortPatternOnly = Pattern.compile("^" + shortPattern + "$");
+//    private static List<String> shortPatternNames = getNamedGroupCandidates(shortPattern.pattern());
+//
+//    private static Pattern argsPattern =
+//            Pattern.compile(
+//                    "((\\w+?)=(.+?);)*", Pattern.COMMENTS
+//            );
+//    private static Pattern argsPatternOnly = Pattern.compile("^" + argsPattern + "$");
+//
+//    private static Pattern fullPattern =
+//            Pattern.compile(
+//                    "^"
+//                            + "(?<shortForm>" + shortPattern + ")?"
+//                            + "(?:[,:])?"
+//                            + "(?<argsForm>" + argsPattern + ")?"
+//                            + "$", Pattern.COMMENTS
+//            );
+//    private static List<String> fullPatternGroups = getNamedGroupCandidates(fullPattern.pattern());
     public static Optional<ActivityDef> parseActivityDefOptionally(String namedActivitySpec) {
         try {
             ActivityDef activityDef = parseActivityDef(namedActivitySpec);
@@ -129,37 +129,20 @@ public class ActivityDef {
         }
     }
 
+    private static String[] shortParamNames = new String[]{"name", "source", "cycles", "threads", "async", "delay"};
+
     public static ActivityDef parseActivityDef(String namedActivitySpec) {
+        String[] splitAtSemi = namedActivitySpec.split(";");
+        for (int wordidx = 0; wordidx < splitAtSemi.length; wordidx++) {
 
-        Matcher fullMatcher = fullPattern.matcher(namedActivitySpec);
-
-        if (!fullMatcher.matches()) {
-            throw new RuntimeException("Unable to parse named activity spec:" + namedActivitySpec);
-        }
-//        else {
-//            for (int i = 0; i < matcher.groupCount(); i++) {
-//                logger.info("group(" + (i+1) + "/" + groupNames.get(i) + "):" + matcher.group(i+1) );
-//            }
-//            System.out.println("matched!");
-//        }
-
-        Optional<String> shortForm = Optional.ofNullable(fullMatcher.group("shortForm"));
-        Optional<String> argsForm = Optional.ofNullable(fullMatcher.group("argsForm"));
-        String allArgs = argsForm.orElse("");
-
-        if (shortForm.isPresent()) {
-
-            Matcher shortFormMatcher = shortPattern.matcher(shortForm.get());
-            if (!shortFormMatcher.matches()) {
-                throw new RuntimeException("Unable to parse named activity spec short form:" + shortForm.get());
+            if (!splitAtSemi[wordidx].contains("=")) {
+                splitAtSemi[wordidx] = shortParamNames[wordidx] + "=" + splitAtSemi[wordidx] +";";
             }
-
-            allArgs +=
-                    shortPatternNames.stream()
-                            .filter(s -> Optional.ofNullable(shortFormMatcher.group(s)).isPresent())
-                            .map(v -> v + "=" + shortFormMatcher.group(v) + ";")
-                            .collect(Collectors.joining());
+            if (!splitAtSemi[wordidx].endsWith(";")) {
+                splitAtSemi[wordidx] = splitAtSemi[wordidx] + ";";
+            }
         }
+        String allArgs = Arrays.asList(splitAtSemi).stream().collect(Collectors.joining());
 
         ParameterMap activityParameterMap = ParameterMap.parseOrException(allArgs);
         ActivityDef activityDef = new ActivityDef(activityParameterMap);

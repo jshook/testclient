@@ -87,7 +87,7 @@ public class ParameterMap {
     }
 
 
-    private static Pattern encodedParamsPattern = Pattern.compile("(\\w+?)=(.+);");
+    private static Pattern encodedParamsPattern = Pattern.compile("(\\w+?)=(.+?);");
 
     public static ParameterMap parseOrException(String encodedParams) {
         if (encodedParams == null) {
@@ -99,8 +99,10 @@ public class ParameterMap {
         LinkedHashMap<String, String> newParamMap = new LinkedHashMap<>();
 
         int lastEnd = 0;
+        int triedAt = 0;
 
         while (matcher.find()) {
+            triedAt = lastEnd;
             String paramName = matcher.group(1);
             String paramValueString = matcher.group(2);
             newParamMap.put(paramName, paramValueString);
@@ -108,7 +110,7 @@ public class ParameterMap {
         }
 
         if (lastEnd != encodedParams.length()) {
-            throw new RuntimeException("unable to find pattern " + encodedParamsPattern.pattern() + " in input" + encodedParams);
+            throw new RuntimeException("unable to find pattern " + encodedParamsPattern.pattern() + " at position " + triedAt + " in input" + encodedParams);
         }
 
         return new ParameterMap(newParamMap);

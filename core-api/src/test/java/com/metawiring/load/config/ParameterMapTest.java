@@ -62,8 +62,15 @@ public class ParameterMapTest {
         Optional<ParameterMap> stringOnly = ParameterMap.parseParams("stringval=avalue;");
         assertThat(stringOnly.isPresent()).isTrue();
         assertThat(stringOnly.get().getStringOrDefault("stringval", "othervalue")).isEqualTo("avalue");
-        assertThat(stringOnly.get().getStringOrDefault("missing","othervalue")).isEqualTo("othervalue");
+        assertThat(stringOnly.get().getStringOrDefault("missing", "othervalue")).isEqualTo("othervalue");
+    }
 
+    @Test
+    public void testGetStringStringParam() {
+        Optional<ParameterMap> stringOnly = ParameterMap.parseParams("stringval=avalue;stringval2=avalue2;");
+        assertThat(stringOnly.isPresent()).isTrue();
+        assertThat(stringOnly.get().getStringOrDefault("stringval", "othervalue")).isEqualTo("avalue");
+        assertThat(stringOnly.get().getStringOrDefault("stringval2", "othervalue1")).isEqualTo("avalue2");
     }
 
 
