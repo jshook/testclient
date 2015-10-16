@@ -53,7 +53,7 @@ public class ReadyStatementTemplate {
      */
     public ReadyStatement bindGenerators(long startCycle) {
         ReadyStatement readyStatement = new ReadyStatement(generatorSource,preparedStatement,startCycle);
-        for (String bindName : yamlStatementDef.getBindNamesExcept("table", "keyspace", "cl")) {
+        for (String bindName : yamlStatementDef.getBindNamesExcept("table", "keyspace", "cl", "rf")) {
             String genName = yamlStatementDef.bindings.get(bindName);
             readyStatement.addBinding(bindName,genName);
         }
