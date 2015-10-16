@@ -24,6 +24,8 @@ import com.metawiring.load.config.StatementDef;
 import com.metawiring.load.config.TestClientConfig;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
+import java.util.Optional;
+
 /**
  * Captures the mappings between a non-prepared statement and the generator settings that will be paired with it.
  * Provides convenience methods for easily preparing statements as well as assigning unbound generators defs.
@@ -54,8 +56,9 @@ public class ReadyStatementTemplate {
     public ReadyStatement bindGenerators(long startCycle) {
         ReadyStatement readyStatement = new ReadyStatement(generatorSource,preparedStatement,startCycle);
         for (String bindName : yamlStatementDef.getBindNamesExcept("table", "keyspace", "cl", "rf")) {
-            String genName = yamlStatementDef.bindings.get(bindName);
-            readyStatement.addBinding(bindName,genName);
+            Optional<String> genName = Optional.of(yamlStatementDef.bindings.get(bindName));
+            genName.orElseThrow(() -> new RuntimeException("generator binding referenced, but not defined:" + bindName));
+            readyStatement.addBinding(bindName,genName.get());
         }
 
         return readyStatement;
