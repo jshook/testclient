@@ -48,6 +48,7 @@ public class YAMLFileADL implements ActivityDispenserLocator {
                 logger.debug("Looking for " + pathVariant + " in filesystem.");
                 File yamlFile = new File(pathVariant);
                 if (yamlFile.exists()) {
+                    logger.info("Found activity in filesystem: " + pathVariant);
                     return Optional.of(new YamlActivityDispenser(activityDef,pathVariant,null));
                 }
             }
