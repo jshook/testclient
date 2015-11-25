@@ -34,7 +34,7 @@ public class MetricReporters {
     private static MetricReporters instance = new MetricReporters();
 
 
-    private List<MetricRegistry> metricRegistries = new ArrayList<>();
+    private List<PrefixedRegistry> metricRegistries = new ArrayList<>();
     private List<ScheduledReporter> scheduledReporters = new ArrayList<>();
 
     private MetricReporters() {
@@ -44,8 +44,8 @@ public class MetricReporters {
         return instance;
     }
 
-    public MetricReporters addRegistry(MetricRegistry metricsRegistry) {
-        this.metricRegistries.add(metricsRegistry);
+    public MetricReporters addRegistry(String registryPrefix, MetricRegistry metricsRegistry) {
+        this.metricRegistries.add(new PrefixedRegistry(registryPrefix,metricsRegistry));
         return this;
     }
 
@@ -55,11 +55,11 @@ public class MetricReporters {
             throw new RuntimeException("There are no metric registries.");
         }
 
-        for (MetricRegistry metricRegistry : metricRegistries) {
+        for (PrefixedRegistry prefixedRegistry : metricRegistries) {
 
             Graphite graphite = new Graphite(new InetSocketAddress(host, graphitePort));
-            GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(metricRegistry)
-                    .prefixedWith(prefix)
+            GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(prefixedRegistry.metricRegistry)
+                    .prefixedWith(prefixedRegistry.prefix!=null ? (!prefixedRegistry.prefix.isEmpty() ? prefix+prefixedRegistry.prefix : prefix) : prefix)
                     .convertRatesTo(TimeUnit.SECONDS)
                     .convertDurationsTo(TimeUnit.MILLISECONDS)
                     .filter(MetricFilter.ALL)
@@ -81,15 +81,15 @@ public class MetricReporters {
 //        return this;
 //    }
 
-    public MetricReporters addLogger(MetricRegistry registry) {
+    public MetricReporters addLogger() {
 
         if (metricRegistries.isEmpty()) {
             throw new RuntimeException("There are no metric registries.");
         }
 
-        for (MetricRegistry metricRegistry : metricRegistries) {
+        for (PrefixedRegistry prefixedRegistry : metricRegistries) {
 
-            Slf4jReporter loggerReporter = Slf4jReporter.forRegistry(registry)
+            Slf4jReporter loggerReporter = Slf4jReporter.forRegistry(prefixedRegistry.metricRegistry)
                     .convertRatesTo(TimeUnit.SECONDS)
                     .convertDurationsTo(TimeUnit.MILLISECONDS)
                     .filter(MetricFilter.ALL)
@@ -127,5 +127,15 @@ public class MetricReporters {
             scheduledReporter.report();
         }
         return this;
+    }
+
+    private class PrefixedRegistry {
+        public String prefix;
+        public MetricRegistry metricRegistry;
+
+        public PrefixedRegistry(String prefix, MetricRegistry metricRegistry) {
+            this.prefix = prefix;
+            this.metricRegistry = metricRegistry;
+        }
     }
 }

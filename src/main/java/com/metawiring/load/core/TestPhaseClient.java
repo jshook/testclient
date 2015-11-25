@@ -51,9 +51,9 @@ public class TestPhaseClient implements Callable<Result> {
         // TODO: Carve the metrics wiring out into something that is easier to manage and integrate. It puts too much noise here.
 
         // Registries come before reporters
-        reporters.addRegistry(context.getSession().getCluster().getMetrics().getRegistry());
-        reporters.addRegistry(metrics);
-        reporters.addLogger(metrics);
+        reporters.addRegistry("driver",context.getSession().getCluster().getMetrics().getRegistry());
+        reporters.addRegistry("client",metrics);
+        reporters.addLogger();
         if (config.graphiteHost != null && !config.graphiteHost.isEmpty()) {
             logger.info("Adding graphite reporter: host="
                     + config.graphiteHost + ":" + config.graphitePort
