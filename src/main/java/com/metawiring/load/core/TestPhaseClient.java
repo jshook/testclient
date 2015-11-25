@@ -52,7 +52,7 @@ public class TestPhaseClient implements Callable<Result> {
 
         // Registries come before reporters
         reporters.addRegistry("driver",context.getSession().getCluster().getMetrics().getRegistry());
-        reporters.addRegistry("client",metrics);
+        reporters.addRegistry("testclient",metrics);
         reporters.addLogger();
         if (config.graphiteHost != null && !config.graphiteHost.isEmpty()) {
             logger.info("Adding graphite reporter: host="
