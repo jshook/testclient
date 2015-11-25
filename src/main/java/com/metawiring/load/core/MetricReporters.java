@@ -45,7 +45,7 @@ public class MetricReporters {
     }
 
     public MetricReporters addRegistry(String registryPrefix, MetricRegistry metricsRegistry) {
-        this.metricRegistries.add(new PrefixedRegistry(registryPrefix,metricsRegistry));
+        this.metricRegistries.add(new PrefixedRegistry(registryPrefix, metricsRegistry));
         return this;
     }
 
@@ -59,7 +59,7 @@ public class MetricReporters {
 
             Graphite graphite = new Graphite(new InetSocketAddress(host, graphitePort));
             GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(prefixedRegistry.metricRegistry)
-                    .prefixedWith(prefixedRegistry.prefix!=null ? (!prefixedRegistry.prefix.isEmpty() ? prefix+prefixedRegistry.prefix : prefix) : prefix)
+                    .prefixedWith(prefixedRegistry.prefix != null ? (!prefixedRegistry.prefix.isEmpty() ? prefix + "." + prefixedRegistry.prefix : prefix) : prefix)
                     .convertRatesTo(TimeUnit.SECONDS)
                     .convertDurationsTo(TimeUnit.MILLISECONDS)
                     .filter(MetricFilter.ALL)
