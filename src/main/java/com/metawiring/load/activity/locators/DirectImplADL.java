@@ -56,7 +56,7 @@ public class DirectImplADL implements ActivityDispenserLocator {
 
         for (String searchPath : searchPaths) {
             try {
-                Class<? extends Activity> activityClass = (Class<? extends Activity>) Class.forName(activityDef.getName());
+                Class<? extends Activity> activityClass = (Class<? extends Activity>) Class.forName(searchPath);
                 if (activityClass != null) {
                     DirectImplActivityDispenser directImplActivityDispenser = new DirectImplActivityDispenser(activityDef.getName(), activityClass);
                     return Optional.of(directImplActivityDispenser);

@@ -18,11 +18,15 @@
 
 package com.metawiring.load.activities;
 
+import ch.qos.logback.core.spi.ContextAware;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
 import com.datastax.driver.core.*;
+import com.metawiring.load.config.ActivityDef;
+import com.metawiring.load.core.ExecutionContext;
 import com.metawiring.load.generator.GeneratorBindingList;
+import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +38,7 @@ import static com.codahale.metrics.MetricRegistry.name;
 /**
  * This should be written in more of a pipeline way, with consumer and producer pools, but not now.
  */
-public class WriteTelemetryAsyncActivity extends BaseActivity {
+public class WriteTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<ExecutionContext> {
 
     private static Logger logger = LoggerFactory.getLogger(WriteTelemetryAsyncActivity.class);
 
@@ -54,8 +58,23 @@ public class WriteTelemetryAsyncActivity extends BaseActivity {
     private long endCycle, submittedCycle;
     private int pendingRq = 0;
 
-    private long maxAsync = 0l;
+    private long maxAsync = 0L;
     private GeneratorBindingList generatorBindingList;
+
+    @Override
+    public ExecutionContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+        return executionContext;
+    }
+
+    @Override
+    public void loadSharedContext(ExecutionContext sharedContext) {
+        this.context = sharedContext;
+    }
+
+    @Override
+    public Class<?> getSharedContextClass() {
+        return ExecutionContext.class;
+    }
 
     private class TimedResultSetFuture {
         ResultSetFuture rsFuture;
@@ -131,7 +150,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity {
     @Override
     public void createSchema() {
         String keyspaceDDL = "" +
-                "CREATE keyspace " + context.getConfig().keyspace +
+                "CREATE keyspace if not exists " + context.getConfig().keyspace +
                 " with replication = {'class' : 'SimpleStrategy', 'replication_factor' : " + context.getConfig().defaultReplicationFactor + "};";
 
         try {
@@ -143,7 +162,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity {
         }
 
         String tableDDL = "" +
-                "CREATE table "+ context.getConfig().keyspace + "." + context.getConfig().table +
+                "CREATE table if not exists "+ context.getConfig().keyspace + "." + context.getConfig().table +
                 " (\n" +
                 "  source int,\n" +
                 "  epoch_hour text,\n" +

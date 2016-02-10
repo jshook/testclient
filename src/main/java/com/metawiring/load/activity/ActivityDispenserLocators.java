@@ -18,6 +18,7 @@
 
 package com.metawiring.load.activity;
 
+import com.metawiring.load.activities.WriteTelemetryAsyncActivity;
 import com.metawiring.load.activities.cql.CQLYamlActivity;
 import com.metawiring.load.activity.locators.*;
 import com.metawiring.load.config.ActivityDef;
@@ -38,7 +39,7 @@ public class ActivityDispenserLocators implements ActivityDispenserFactory {
         add(new YAMLFileADL("activities"));
         add(new YAMLResourceADL("activities"));
         add(new DirectImplADL(
-                CQLYamlActivity.class.getPackage().getName()
+                WriteTelemetryAsyncActivity.class.getPackage().getName()
         ));
     }};
 
