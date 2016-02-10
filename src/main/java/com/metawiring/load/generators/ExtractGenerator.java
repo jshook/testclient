@@ -81,7 +81,7 @@ public class ExtractGenerator implements Generator<String> {
 
     private CharBuffer loadFileData() {
         InputStream stream = null;
-        File onFileSystem= new File("data" + File.pathSeparator + fileName);
+        File onFileSystem= new File("data" + File.separator + fileName);
 
         if (onFileSystem.exists()) {
             try {
