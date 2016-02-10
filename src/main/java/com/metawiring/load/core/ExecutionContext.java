@@ -20,9 +20,7 @@ package com.metawiring.load.core;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ScheduledReporter;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ProtocolOptions;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.*;
 import com.metawiring.load.config.TestClientConfig;
 import com.metawiring.load.generator.*;
 import org.joda.time.Interval;
@@ -52,6 +50,7 @@ public class ExecutionContext {
     public void startup() {
 
         Cluster.Builder builder = Cluster.builder()
+                .withTimestampGenerator(ServerSideTimestampGenerator.INSTANCE)
                 .addContactPoint(config.host)
                 .withPort(config.port)
                 .withCompression(ProtocolOptions.Compression.NONE);
