@@ -89,7 +89,7 @@ public class ExtractGenerator implements Generator<String> {
             } catch (FileNotFoundException e) {
                 throw new RuntimeException("Unable to find file " + onFileSystem.getPath() + " after verifying that it exists.");
             }
-            logger.debug("Loaded file data from " + fileName);
+            logger.debug("Loaded file data from " + onFileSystem.getPath());
         }
 
         if (stream==null) {
