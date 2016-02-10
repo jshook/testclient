@@ -31,7 +31,7 @@ import java.nio.CharBuffer;
 public class ExtractGenerator implements Generator<String> {
 
     private final static Logger logger = LoggerFactory.getLogger(ExtractGenerator.class);
-    private static CharBuffer loremIpsumImage=null;
+    private static CharBuffer fileDataImage =null;
 
     private int minsize, maxsize;
     MersenneTwister rng = new MersenneTwister(System.nanoTime());
@@ -52,11 +52,11 @@ public class ExtractGenerator implements Generator<String> {
     @Override
     public String get() {
 
-        if (loremIpsumImage == null) {
+        if (fileDataImage == null) {
             synchronized (ExtractGenerator.class) {
-                if (loremIpsumImage == null) {
-                    CharBuffer image= loadLoremIpsum();
-                    loremIpsumImage = image;
+                if (fileDataImage == null) {
+                    CharBuffer image= loadFileData();
+                    fileDataImage = image;
 
                 }
             }
@@ -65,21 +65,21 @@ public class ExtractGenerator implements Generator<String> {
         if (sizeDistribution==null)
         {
             sizeDistribution = new UniformIntegerDistribution(rng, minsize, maxsize);
-            positionDistribution = new UniformIntegerDistribution(rng, 1, loremIpsumImage.limit() - maxsize);
+            positionDistribution = new UniformIntegerDistribution(rng, 1, fileDataImage.limit() - maxsize);
         }
 
         int offset = positionDistribution.sample();
         int length = sizeDistribution.sample();
         String sub = null;
         try {
-            sub = loremIpsumImage.subSequence(offset, offset + length).toString();
+            sub = fileDataImage.subSequence(offset, offset + length).toString();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return sub;
     }
 
-    private CharBuffer loadLoremIpsum() {
+    private CharBuffer loadFileData() {
         InputStream stream = null;
         File onFileSystem= new File("data" + File.pathSeparator + fileName);
 
@@ -89,10 +89,12 @@ public class ExtractGenerator implements Generator<String> {
             } catch (FileNotFoundException e) {
                 throw new RuntimeException("Unable to find file " + onFileSystem.getPath() + " after verifying that it exists.");
             }
+            logger.debug("Loaded file data from " + fileName);
         }
 
         if (stream==null) {
             stream = Thread.currentThread().getContextClassLoader().getResourceAsStream("data/"+fileName);
+            logger.debug("Loaded file data from classpath resource " + fileName);
         }
 
         if (stream == null) {
