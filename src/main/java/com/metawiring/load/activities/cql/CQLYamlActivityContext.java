@@ -38,8 +38,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 /**
  * This is the runtime shared object between all instances of a given YamlConfigurableActivity. For now, it is CQL-flavored.
  */
-public class CQLActivityContext extends BaseActivityContext implements ActivityContext {
-    private final static Logger logger = LoggerFactory.getLogger(CQLActivityContext.class);
+public class CQLYamlActivityContext extends BaseActivityContext implements ActivityContext {
+    private final static Logger logger = LoggerFactory.getLogger(CQLYamlActivityContext.class);
 
     Timer timerOps;
     Timer timerWaits;
@@ -50,7 +50,7 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
     ExecutionContext executionContext;
     YamlActivityDef yamlActivityDef;
 
-    public CQLActivityContext(ActivityDef def, YamlActivityDef yamlActivityDef, ScopedCachingGeneratorSource scopedCachingGeneratorSource, ExecutionContext executionContext) {
+    public CQLYamlActivityContext(ActivityDef def, YamlActivityDef yamlActivityDef, ScopedCachingGeneratorSource scopedCachingGeneratorSource, ExecutionContext executionContext) {
         super(def, scopedCachingGeneratorSource, executionContext);
         timerOps = executionContext.getMetrics().timer(name(def.getName(), "ops-total"));
         timerWaits = executionContext.getMetrics().timer(name(def.getName(), "ops-wait"));
@@ -71,7 +71,7 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
                 getActivityGeneratorSource(),
                 executionContext.getConfig()
         );
-        readyStatementsTemplate.addStatements(yamlActivityDef,"dml");
+        readyStatementsTemplate.addStatementsFromYaml(yamlActivityDef,"dml");
         readyStatementsTemplate.prepareAll();
         return readyStatementsTemplate;
     }
@@ -95,7 +95,7 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
                 getActivityGeneratorSource(),
                 executionContext.getConfig()
         );
-        readyStatementsTemplate.addStatements(yamlActivityDef, "ddl");
+        readyStatementsTemplate.addStatementsFromYaml(yamlActivityDef, "ddl");
         readyStatementsTemplate.prepareAll();
         ReadyStatements rs = readyStatementsTemplate.bindAllGenerators(0);
         for (ReadyStatement readyStatement : rs.getReadyStatements()) {

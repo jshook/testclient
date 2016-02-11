@@ -29,6 +29,15 @@ public class StatementDef {
     public Map<String,String> bindings = new HashMap<String,String>();
     private String[] bindNames;
 
+    public StatementDef() {
+    }
+
+    public StatementDef(String name, String cql, Map<String,String> bindings) {
+        this.name = name;
+        this.cql = cql;
+        this.bindings = bindings;
+    }
+
     Pattern bindableRegex = Pattern.compile("<<(\\w+)>>");
     /**
      * @return bindableNames in order as specified in the parameter placeholders

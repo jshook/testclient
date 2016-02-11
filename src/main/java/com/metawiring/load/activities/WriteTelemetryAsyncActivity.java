@@ -18,19 +18,25 @@
 
 package com.metawiring.load.activities;
 
-import ch.qos.logback.core.spi.ContextAware;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
 import com.datastax.driver.core.*;
+import com.google.common.collect.ImmutableMap;
 import com.metawiring.load.config.ActivityDef;
+import com.metawiring.load.config.StatementDef;
 import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.core.ReadyStatements;
+import com.metawiring.load.core.ReadyStatementsTemplate;
 import com.metawiring.load.generator.GeneratorBindingList;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -38,42 +44,51 @@ import static com.codahale.metrics.MetricRegistry.name;
 /**
  * This should be written in more of a pipeline way, with consumer and producer pools, but not now.
  */
-public class WriteTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<ExecutionContext> {
+@SuppressWarnings("ALL")
+public class WriteTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext> {
 
     private static Logger logger = LoggerFactory.getLogger(WriteTelemetryAsyncActivity.class);
-
-    private static final String SOURCE_FIELD = "source";
-    private static final String EPOCH_HOUR_FIELD = "epoch_hour";
-    private static final String PARAM_FIELD = "param";
-    private static final String TIMESTAMP_FIELD = "ts";
-    private static final String DATA_FIELD = "data";
-    private static final String CYCLE_FIELD = "cycle";
-
-    private static final String insertStmt = "insert into KEYSPACE.TABLE"
-            + " (" + SOURCE_FIELD + "," + EPOCH_HOUR_FIELD + "," + PARAM_FIELD + "," + TIMESTAMP_FIELD + "," + DATA_FIELD + "," + CYCLE_FIELD +") values (?,?,?,?,?,?);";
-
-//    private static final String insertStmt = "insert into " + TELEMETRY_KEYSPACE + "." + TELEMETRY_TABLE
-//            + " (" + SOURCE_FIELD + "," + YEARMONDAY_FIELD + "," + PARAM_FIELD + "," + TIMESTAMP_FIELD + "," + DATA_FIELD + ") values (?,?,?,?,?);";
 
     private long endCycle, submittedCycle;
     private int pendingRq = 0;
 
     private long maxAsync = 0L;
     private GeneratorBindingList generatorBindingList;
+    private CQLActivityContext cqlSharedContext;
+    private ReadyStatements readyStatements;
 
     @Override
-    public ExecutionContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
-        return executionContext;
+    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+        CQLActivityContext activityContext = new CQLActivityContext(def, genSource, executionContext);
+
+        String tableDDL = "" +
+                "CREATE table if not exists "
+                + activityContext.getExecutionContext().getConfig().keyspace + "."
+                + activityContext.getExecutionContext().getConfig().table +
+                " (\n" +
+                "  source int,\n" +
+                "  epoch_hour text,\n" +
+                "  param text,\n" +
+                "  ts timestamp,\n" +
+                "  cycle bigint,\n" +
+                "  data text,\n" +
+                "  PRIMARY KEY ((source, epoch_hour), param, ts)\n" +
+                ") WITH CLUSTERING ORDER BY (param ASC, ts DESC)";
+
+
+        return activityContext;
+
     }
 
     @Override
-    public void loadSharedContext(ExecutionContext sharedContext) {
-        this.context = sharedContext;
+    public void loadSharedContext(CQLActivityContext cqlSharedContext) {
+        this.cqlSharedContext = cqlSharedContext;
+        context = cqlSharedContext.getExecutionContext();
     }
 
     @Override
     public Class<?> getSharedContextClass() {
-        return ExecutionContext.class;
+        return CQLActivityContext.class;
     }
 
     private class TimedResultSetFuture {
@@ -85,99 +100,103 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
 
     private LinkedList<TimedResultSetFuture> timedResultSetFutures = new LinkedList<>();
 
-    private static PreparedStatement addTelemetryStmt;
-    private static Session session;
+//    private static Session session;
 
     private Timer timerOps;
     private Timer timerWaits;
     private Counter activityAsyncPendingCounter;
     private Histogram triesHistogram;
 
+    /**
+     * This will be deprecated in favor of shared activity contexts in the future.
+     *
+     * @param startCycle
+     * @param endCycle
+     * @param maxAsync   - total number of async operations this activity can have pending
+     */
     @Override
     public void prepare(long startCycle, long endCycle, long maxAsync) {
         this.maxAsync = maxAsync;
         this.endCycle = endCycle;
         submittedCycle = startCycle - 1l;
 
-        timerOps = context.getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
-        timerWaits = context.getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
-
-        activityAsyncPendingCounter = context.getMetrics().counter(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
-
-        triesHistogram = context.getMetrics().histogram(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
-
-        // To populate the namespace
-        context.getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
-
-        // This, along with static scope of the prepared stmt, will avoid "preparing the same query more than once"
-        if (addTelemetryStmt == null) {
-            synchronized (WriteTelemetryAsyncActivity.class) {
-                if (addTelemetryStmt == null) {
-                    try {
-                        if (addTelemetryStmt == null) {
-                            session = context.getSession();
-
-                            if (context.getConfig().createSchema) {
-                                return;
-                            }
-
-                            String statement = insertStmt;
-                            statement = statement.replaceAll("KEYSPACE",context.getConfig().keyspace);
-                            statement = statement.replaceAll("TABLE",context.getConfig().table);
-                            addTelemetryStmt = session.prepare(statement).setConsistencyLevel(context.getConfig().defaultConsistencyLevel);
-                        }
-                    } catch (Exception e) {
-                        instrumentException(e);
-                        throw new RuntimeException(e);
-                    }
-                }
-
-            }
+        if (cqlSharedContext.executionContext.getConfig().createSchema) {
+            createSchema();
         }
 
-        // The names are not used as actual parameters for now, but hopefully will later
-        // At least they are useful for diagnosing generator behavior
-        generatorBindingList = createGeneratorBindings();
-        generatorBindingList.bindGenerator(addTelemetryStmt, SOURCE_FIELD, "threadnum");
-        generatorBindingList.bindGenerator(addTelemetryStmt, EPOCH_HOUR_FIELD, "date-epoch-hour", startCycle);
-        generatorBindingList.bindGenerator(addTelemetryStmt, PARAM_FIELD, "varnames");
-        generatorBindingList.bindGenerator(addTelemetryStmt, TIMESTAMP_FIELD, "datesecond", startCycle);
-        generatorBindingList.bindGenerator(addTelemetryStmt, DATA_FIELD, "loremipsum:100:200");
-        generatorBindingList.bindGenerator(addTelemetryStmt, CYCLE_FIELD, "cycle", startCycle);
+        timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
+        timerWaits = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
+
+        activityAsyncPendingCounter = cqlSharedContext.getExecutionContext().getMetrics().counter(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
+
+        triesHistogram = cqlSharedContext.getExecutionContext().getMetrics().histogram(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
+
+        // To populate the namespace
+        cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
+
+        List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
+            {
+
+                add(
+                        new StatementDef(
+                                "write-telemetry",
+                                "insert into <<KEYSPACE>>.<<TABLE>>_telemetry (source, epoch_hour, param, ts, data, cycle)\n" +
+                                        "     values (<<source>>,<<epoch_hour>>,<<param>>,<<ts>>,<<data>>,<<cycle>>);",
+                                ImmutableMap.<String, String>builder()
+                                        .put("source", "ThreadNumGenerator")
+                                        .put("epoch_hour", "DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH")
+                                        .put("param", "LineExtractGenerator:data/variable_words.txt")
+                                        .put("ts", "DateSequenceGenerator:1000")
+                                        .put("data", "LoremExtractGenerator:100:200")
+                                        .put("cycle", "CycleNumberGenerator")
+                                        .build()
+                        )
+                );
+            }
+        };
+        ReadyStatementsTemplate readyStatementsTemplate = cqlSharedContext.initReadyStatementsTemplate(statementDefs);
+        readyStatements = readyStatementsTemplate.bindAllGenerators(startCycle);
+
 
     }
 
     @Override
     public void createSchema() {
-        String keyspaceDDL = "" +
-                "CREATE keyspace if not exists " + context.getConfig().keyspace +
-                " with replication = {'class' : 'SimpleStrategy', 'replication_factor' : " + context.getConfig().defaultReplicationFactor + "};";
+        String keyspaceDDL = "create keyspace if not exists <<KEYSPACE>> WITH replication =\n" +
+                "    {'class': 'SimpleStrategy', 'replication_factor': <<RF>>};";
+
+        StatementDef keyspaceStmt = new StatementDef(
+                "create-keyspace",
+                keyspaceDDL,
+                ImmutableMap.<String, String>builder()
+                        .build());
+
+        String tableDDL = "" +
+                "create table if not exists <<KEYSPACE>>.<<TABLE>>_telemetry (\n" +
+                "    source int,      // data source id\n" +
+                "    epoch_hour text, // time bucketing\n" +
+                "    param text,      // variable name for a type of measurement\n" +
+                "    ts timestamp,    // timestamp of measurement\n" +
+                "    cycle bigint,    // cycle, for diagnostics\n" +
+                "    data text,       // measurement data\n" +
+                "    PRIMARY KEY ((source, epoch_hour), param, ts)\n" +
+                "    ) WITH CLUSTERING ORDER BY (param ASC, ts DESC)";
+
+        StatementDef tableStmt = new StatementDef("create-table", tableDDL, ImmutableMap.<String, String>builder().build());
 
         try {
-            session.execute(keyspaceDDL);
-            logger.info("Created keyspace " + context.getConfig().keyspace);
+            cqlSharedContext.session.execute(keyspaceStmt.getCookedStatement(cqlSharedContext.getExecutionContext().getConfig()));
+            logger.info("Created keyspace " + cqlSharedContext.getExecutionContext().getConfig().keyspace);
         } catch (Exception e) {
-            logger.error("Error while creating keyspace " + context.getConfig().keyspace, e);
+            logger.error("Error while creating keyspace " + cqlSharedContext.getExecutionContext().getConfig().keyspace, e);
             throw new RuntimeException(e); // Let this escape, it's a critical runtime exception
         }
 
-        String tableDDL = "" +
-                "CREATE table if not exists "+ context.getConfig().keyspace + "." + context.getConfig().table +
-                " (\n" +
-                "  source int,\n" +
-                "  epoch_hour text,\n" +
-                "  param text,\n" +
-                "  ts timestamp,\n" +
-                "  cycle bigint,\n" +
-                "  data text,\n" +
-                "  PRIMARY KEY ((source, epoch_hour), param, ts)\n" +
-                ") WITH CLUSTERING ORDER BY (param ASC, ts DESC)";
-
         try {
-            session.execute(tableDDL);
-            logger.info("Created table " + context.getConfig().table);
+            cqlSharedContext.session.execute(tableStmt.getCookedStatement(cqlSharedContext.getExecutionContext().getConfig()));
+            logger.info("Created table " + cqlSharedContext.getExecutionContext().getConfig().table);
         } catch (Exception e) {
-            logger.error("Error while creating table " + context.getConfig().table, e);
+            logger.error("Error while creating table " + cqlSharedContext.getExecutionContext().getConfig().table, e);
             throw new RuntimeException(e); // Let this escape, it's a critical runtime exception
         }
 
@@ -193,12 +212,13 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
         // Not at limit, let the good times roll
         // This section fills the async pipeline to the configured limit
         while ((submittedCycle < endCycle) && (pendingRq < maxAsync)) {
+            long submittingCycle = submittedCycle + 1;
             try {
 
                 TimedResultSetFuture trsf = new TimedResultSetFuture();
-                trsf.boundStatement = addTelemetryStmt.bind(generatorBindingList.getAll());
+                trsf.boundStatement = readyStatements.getNext(submittingCycle).bind();
                 trsf.timerContext = timerOps.time();
-                trsf.rsFuture = session.executeAsync(trsf.boundStatement);
+                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.boundStatement);
                 trsf.tries++;
 
                 timedResultSetFutures.add(trsf);
@@ -222,29 +242,31 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
         }
 
         while (trsf.tries < triesLimit) {
-            Timer.Context waitTimer= null;
+            Timer.Context waitTimer = null;
             try {
                 waitTimer = timerWaits.time();
                 trsf.rsFuture.getUninterruptibly();
                 waitTimer.stop();
-                waitTimer=null;
+                waitTimer = null;
                 break;
             } catch (Exception e) {
-                if (waitTimer!=null) { waitTimer.stop(); }
+                if (waitTimer != null) {
+                    waitTimer.stop();
+                }
                 instrumentException(e);
-                trsf.rsFuture = session.executeAsync(trsf.boundStatement);
+                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.boundStatement);
                 try {
-                    Thread.sleep(trsf.tries*100l);
+                    Thread.sleep(trsf.tries * 100l);
                 } catch (InterruptedException ignored) {
                 }
                 trsf.tries++;
             }
         }
 
-         pendingRq--;
-         activityAsyncPendingCounter.dec();
-         long duration = trsf.timerContext.stop();
-         triesHistogram.update(trsf.tries);
+        pendingRq--;
+        activityAsyncPendingCounter.dec();
+        long duration = trsf.timerContext.stop();
+        triesHistogram.update(trsf.tries);
 
     }
 

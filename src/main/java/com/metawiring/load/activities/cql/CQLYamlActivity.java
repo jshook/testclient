@@ -20,7 +20,6 @@ package com.metawiring.load.activities.cql;
 
 import com.codahale.metrics.Timer;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
 import com.metawiring.load.activities.ActivityContextAware;
 import com.metawiring.load.activity.Activity;
 import com.metawiring.load.activity.TimedResultSetFuture;
@@ -37,7 +36,7 @@ import java.util.LinkedList;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
-public class CQLYamlActivity implements Activity, ActivityContextAware<CQLActivityContext> {
+public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlActivityContext> {
 
     private static Logger logger = LoggerFactory.getLogger(CQLYamlActivity.class);
 
@@ -47,7 +46,7 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLActivi
 
     private ReadyStatements readyStatements;
     private LinkedList<TimedResultSetFuture> timedResultSetFutures = new LinkedList<>();
-    private CQLActivityContext activityContext;
+    private CQLYamlActivityContext activityContext;
     private YamlActivityDef yamlActivityDef;
 
     public CQLYamlActivity(YamlActivityDef yamlActivityDef) {
@@ -63,7 +62,6 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLActivi
 
         if (activityContext.executionContext.getConfig().createSchema) {
             createSchema();
-            return;
         }
 
         readyStatements = activityContext.getReadyStatementsTemplate().bindAllGenerators(startCycle);
@@ -164,19 +162,19 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLActivi
     }
 
     @Override
-    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
-        CQLActivityContext activityContext = new CQLActivityContext(def, yamlActivityDef, genSource, executionContext);
+    public CQLYamlActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+        CQLYamlActivityContext activityContext = new CQLYamlActivityContext(def, yamlActivityDef, genSource, executionContext);
         return activityContext;
     }
 
     @Override
-    public void loadSharedContext(CQLActivityContext sharedContext) {
+    public void loadSharedContext(CQLYamlActivityContext sharedContext) {
         this.activityContext = sharedContext;
     }
 
     @Override
     public Class<?> getSharedContextClass() {
-        return CQLActivityContext.class;
+        return CQLYamlActivityContext.class;
     }
 
     protected void instrumentException(Exception e) {

@@ -82,15 +82,6 @@ public class ActivityExecutorService {
                 ((ActivityContextAware) initialActivity).loadSharedContext(contextToShare); // in case we need to use this for createSchema
             }
 
-            // TODO: This is an ugly hack too. Remove it ASAP.
-            if (context.getConfig().createSchema) {
-//                initialActivity.init(def.getName(), context, activityScopedGeneratorSource);
-                initialActivity.prepare(0, 1, 0);
-                initialActivity.createSchema();
-                initialActivity.cleanup();
-                continue;
-            }
-
             ThreadFactory tf = new IndexedThreadFactory(def.toString());
             ExecutorService executorService = Executors.newFixedThreadPool(context.getConfig().createSchema ? 1 : def.getThreads(), tf);
             executorServices.add(executorService);

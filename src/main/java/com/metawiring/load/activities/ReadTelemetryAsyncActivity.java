@@ -21,14 +21,22 @@ package com.metawiring.load.activities;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
-import com.metawiring.load.activity.TimedResultSetFuture;
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ResultSetFuture;
+import com.google.common.collect.ImmutableMap;
+import com.metawiring.load.config.ActivityDef;
+import com.metawiring.load.config.StatementDef;
+import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.core.ReadyStatements;
+import com.metawiring.load.core.ReadyStatementsTemplate;
 import com.metawiring.load.generator.GeneratorBindingList;
+import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -36,92 +44,111 @@ import static com.codahale.metrics.MetricRegistry.name;
 /**
  * This should be written in more of a pipeline way, with consumer and producer pools, but not now.
  */
-public class ReadTelemetryAsyncActivity extends BaseActivity {
+@SuppressWarnings("ALL")
+public class ReadTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext> {
 
     private static Logger logger = LoggerFactory.getLogger(ReadTelemetryAsyncActivity.class);
-    private GeneratorBindingList generatorBindingList;
-
-    private static final String SOURCE_FIELD = "source";
-    private static final String PARAM_FIELD = "param";
-    private static final String EPOCH_HOUR_FIELD = "epoch_hour";
-    private static final String TIMESTAMP_FIELD = "ts";
-    private static final String DATA_FIELD = "data";
-
-    private static final String selectStmt = "select * from KEYSPACE.TABLE"
-            + " where " + SOURCE_FIELD + "=? and " + EPOCH_HOUR_FIELD + "=? and " + PARAM_FIELD + "=? limit 10";
 
     private long endCycle, submittedCycle;
     private int pendingRq = 0;
 
-    private long maxAsync = 0l;
+    private long maxAsync = 0L;
+    private GeneratorBindingList generatorBindingList;
+    private CQLActivityContext cqlSharedContext;
+    private ReadyStatements readyStatements;
 
+    @Override
+    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+        CQLActivityContext activityContext = new CQLActivityContext(def, genSource, executionContext);
+        return activityContext;
+    }
+
+    @Override
+    public void loadSharedContext(CQLActivityContext cqlSharedContext) {
+        this.cqlSharedContext = cqlSharedContext;
+        context = cqlSharedContext.getExecutionContext();
+    }
+
+    @Override
+    public Class<?> getSharedContextClass() {
+        return CQLActivityContext.class;
+    }
+
+    private class TimedResultSetFuture {
+        ResultSetFuture rsFuture;
+        Timer.Context timerContext;
+        BoundStatement boundStatement;
+        int tries = 0;
+    }
 
     private LinkedList<TimedResultSetFuture> timedResultSetFutures = new LinkedList<>();
 
-    private static PreparedStatement selectTelemetryStmt;
-    private static Session session;
+//    private static Session session;
 
     private Timer timerOps;
     private Timer timerWaits;
     private Counter activityAsyncPendingCounter;
-    private Histogram opsHistogram;
     private Histogram triesHistogram;
 
-    @Override
-    public void createSchema() {
-
-    }
-
+    /**
+     * This will be deprecated in favor of shared activity contexts in the future.
+     *
+     * @param startCycle
+     * @param endCycle
+     * @param maxAsync   - total number of async operations this activity can have pending
+     */
     @Override
     public void prepare(long startCycle, long endCycle, long maxAsync) {
         this.maxAsync = maxAsync;
         this.endCycle = endCycle;
         submittedCycle = startCycle - 1l;
 
-        timerOps = context.getMetrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
-        timerWaits = context.getMetrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
-        activityAsyncPendingCounter = context.getMetrics().counter(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
-
-        opsHistogram = context.getMetrics().histogram(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-histogram"));
-        triesHistogram = context.getMetrics().histogram(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
-
-        // To populate the namespace
-        context.getMetrics().counter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
-
-        // This, along with static scope of the prepared stmt, will avoid "preparing the same query more than once"
-        if (selectTelemetryStmt == null) {
-            synchronized (ReadTelemetryAsyncActivity.class) {
-                if (selectTelemetryStmt == null) {
-                    try {
-                        if (selectTelemetryStmt == null) {
-                            session = context.getSession();
-
-                            if (context.getConfig().createSchema) {
-                                return;
-                            }
-
-                            String statement = selectStmt;
-                            statement = statement.replaceAll("KEYSPACE",context.getConfig().keyspace);
-                            statement = statement.replaceAll("TABLE",context.getConfig().table);
-                            selectTelemetryStmt = session.prepare(statement).setConsistencyLevel(context.getConfig().defaultConsistencyLevel);
-                        }
-                    } catch (Exception e) {
-                        instrumentException(e);
-                        throw new RuntimeException(e);
-                    }
-                }
-
-            }
+        if (cqlSharedContext.executionContext.getConfig().createSchema) {
+            createSchema();
         }
 
-        // The names are not used as actual parameters for now, but hopefully will later
-        // At least they are useful for diagnosing generator behavior
-        generatorBindingList = createGeneratorBindings();
-        generatorBindingList.bindGenerator(selectTelemetryStmt, SOURCE_FIELD, "threadnum");
-        generatorBindingList.bindGenerator(selectTelemetryStmt, EPOCH_HOUR_FIELD, "date-epoch-hour", startCycle);
-        generatorBindingList.bindGenerator(selectTelemetryStmt, PARAM_FIELD, "varnames");
+        timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
+        timerWaits = cqlSharedContext.getExecutionContext().getMetrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
+
+        activityAsyncPendingCounter = cqlSharedContext.getExecutionContext().getMetrics().counter(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
+
+        triesHistogram = cqlSharedContext.getExecutionContext().getMetrics().histogram(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
+
+        // To populate the namespace
+        cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
+
+        List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
+            {
+
+                add(
+                        new StatementDef(
+                                "read-recent-telemetry",
+
+                                "     select * from <<KEYSPACE>>.<<TABLE>>_telemetry\n" +
+                                        "     where source=<<source>>\n" +
+                                        "     and epoch_hour=<<epoch_hour>>\n" +
+                                        "     and param=<<param>>\n" +
+                                        "     limit 10\n",
+
+                                ImmutableMap.<String, String>builder()
+                                        .put("source", "ThreadNumGenerator")
+                                        .put("epoch_hour", "DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH")
+                                        .put("param", "LineExtractGenerator:data/variable_words.txt")
+                                        .build()
+                        )
+                );
+            }
+        };
+        ReadyStatementsTemplate readyStatementsTemplate = cqlSharedContext.initReadyStatementsTemplate(statementDefs);
+        readyStatements = readyStatementsTemplate.bindAllGenerators(startCycle);
+
 
     }
+
+    @Override
+    public void createSchema() {
+    }
+
 
     /**
      * Normalize receiving rate to 1/iterate() for now, with bias on priming rq queue
@@ -132,12 +159,13 @@ public class ReadTelemetryAsyncActivity extends BaseActivity {
         // Not at limit, let the good times roll
         // This section fills the async pipeline to the configured limit
         while ((submittedCycle < endCycle) && (pendingRq < maxAsync)) {
+            long submittingCycle = submittedCycle + 1;
             try {
 
                 TimedResultSetFuture trsf = new TimedResultSetFuture();
-                trsf.boundStatement = selectTelemetryStmt.bind(generatorBindingList.getAll());
+                trsf.boundStatement = readyStatements.getNext(submittingCycle).bind();
                 trsf.timerContext = timerOps.time();
-                trsf.rsFuture = session.executeAsync(trsf.boundStatement);
+                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.boundStatement);
                 trsf.tries++;
 
                 timedResultSetFutures.add(trsf);
@@ -146,8 +174,7 @@ public class ReadTelemetryAsyncActivity extends BaseActivity {
                 submittedCycle++;
 
             } catch (Exception e) {
-                String exceptionType = e.getClass().getSimpleName();
-                context.getMetrics().counter(name(ReadTelemetryAsyncActivity.class, "exceptions", exceptionType)).inc();
+                instrumentException(e);
             }
         }
 
@@ -167,25 +194,26 @@ public class ReadTelemetryAsyncActivity extends BaseActivity {
                 waitTimer = timerWaits.time();
                 trsf.rsFuture.getUninterruptibly();
                 waitTimer.stop();
-                waitTimer=null;
+                waitTimer = null;
                 break;
             } catch (Exception e) {
-                if (waitTimer!=null) { waitTimer.stop(); }
+                if (waitTimer != null) {
+                    waitTimer.stop();
+                }
                 instrumentException(e);
+                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.boundStatement);
                 try {
-                    Thread.sleep(trsf.tries*100l);
+                    Thread.sleep(trsf.tries * 100l);
                 } catch (InterruptedException ignored) {
                 }
-                trsf.rsFuture = session.executeAsync(trsf.boundStatement);
                 trsf.tries++;
             }
         }
 
-         pendingRq--;
-         activityAsyncPendingCounter.dec();
-         long duration = trsf.timerContext.stop();
-         opsHistogram.update(duration);
-         triesHistogram.update(trsf.tries);
+        pendingRq--;
+        activityAsyncPendingCounter.dec();
+        long duration = trsf.timerContext.stop();
+        triesHistogram.update(trsf.tries);
 
     }
 

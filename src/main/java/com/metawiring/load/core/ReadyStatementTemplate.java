@@ -32,19 +32,19 @@ import java.util.Optional;
  * Afterwards, can be used to instantiate a thread-specific ReadyStatement object, with shared generators where appropriate.
  */
 public class ReadyStatementTemplate {
-    private final StatementDef yamlStatementDef;
+    private final StatementDef statementDef;
     private final TestClientConfig testClientConfig;
     private PreparedStatement preparedStatement;
     private ScopedCachingGeneratorSource generatorSource;
 
-    public ReadyStatementTemplate(StatementDef yamlStatementDef, ScopedCachingGeneratorSource generatorSource, TestClientConfig testClientConfig) {
-        this.yamlStatementDef = yamlStatementDef;
+    public ReadyStatementTemplate(StatementDef statementDef, ScopedCachingGeneratorSource generatorSource, TestClientConfig testClientConfig) {
+        this.statementDef = statementDef;
         this.generatorSource = generatorSource;
         this.testClientConfig = testClientConfig;
     }
 
     public void prepare(Session session) {
-        preparedStatement = session.prepare(yamlStatementDef.getCookedStatement(testClientConfig));
+        preparedStatement = session.prepare(statementDef.getCookedStatement(testClientConfig));
     }
 
     /**
@@ -55,8 +55,8 @@ public class ReadyStatementTemplate {
      */
     public ReadyStatement bindGenerators(long startCycle) {
         ReadyStatement readyStatement = new ReadyStatement(generatorSource,preparedStatement,startCycle);
-        for (String bindName : yamlStatementDef.getBindNamesExcept("table", "keyspace", "cl", "rf")) {
-            Optional<String> genName = Optional.of(yamlStatementDef.bindings.get(bindName));
+        for (String bindName : statementDef.getBindNamesExcept("table", "keyspace", "cl", "rf")) {
+            Optional<String> genName = Optional.of(statementDef.bindings.get(bindName));
             genName.orElseThrow(() -> new RuntimeException("generator binding referenced, but not defined:" + bindName));
             readyStatement.addBinding(bindName,genName.get());
         }

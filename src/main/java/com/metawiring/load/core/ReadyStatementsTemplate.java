@@ -26,6 +26,7 @@ import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Convenience class for handling multiple ReadyStatement bindings
@@ -42,19 +43,24 @@ public class ReadyStatementsTemplate {
         this.testClientConfig = testClientConfig;
     }
 
+    public ReadyStatementsTemplate addStatementDefs(List<StatementDef> statementDefs) {
 
-    public ReadyStatementsTemplate addStatements(YamlActivityDef yamlActivityDef, String statementSection) {
+        readyStatementTemplates.addAll(
+                statementDefs.stream().map(
+                        statementDef -> new ReadyStatementTemplate(statementDef, generatorSource, testClientConfig)
+                ).collect(Collectors.toList()));
+
+        return this;
+    }
+
+    public ReadyStatementsTemplate addStatementsFromYaml(YamlActivityDef yamlActivityDef, String statementSection) {
 
         switch (statementSection.toLowerCase()) {
             case "ddl":
-                for (StatementDef statementDef : yamlActivityDef.getDdl()) {
-                    readyStatementTemplates.add(new ReadyStatementTemplate(statementDef, generatorSource, testClientConfig));
-                }
+                addStatementDefs(yamlActivityDef.getDdl());
                 break;
             case "dml":
-                for (StatementDef statementDef : yamlActivityDef.getDml()) {
-                    readyStatementTemplates.add(new ReadyStatementTemplate(statementDef, generatorSource, testClientConfig));
-                }
+                addStatementDefs(yamlActivityDef.getDml());
                 break;
             default:
                 throw new RuntimeException("Currently supported statement sections are ddl and dml, not " + statementSection.toLowerCase());

@@ -7,8 +7,8 @@ dml:
      and param=<<param>>
      limit 10
    bindings:
-     source: threadnum
-     epoch_hour: date-epoch-hour
-     param: varnames
+     source: ThreadNumGenerator
+     epoch_hour: DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH
+     param: LineExtractGenerator:data/variable_words.txt
 
 
