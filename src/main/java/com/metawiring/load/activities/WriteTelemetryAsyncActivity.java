@@ -61,20 +61,28 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
     public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
         CQLActivityContext activityContext = new CQLActivityContext(def, genSource, executionContext);
 
-        String tableDDL = "" +
-                "CREATE table if not exists "
-                + activityContext.getExecutionContext().getConfig().keyspace + "."
-                + activityContext.getExecutionContext().getConfig().table +
-                " (\n" +
-                "  source int,\n" +
-                "  epoch_hour text,\n" +
-                "  param text,\n" +
-                "  ts timestamp,\n" +
-                "  cycle bigint,\n" +
-                "  data text,\n" +
-                "  PRIMARY KEY ((source, epoch_hour), param, ts)\n" +
-                ") WITH CLUSTERING ORDER BY (param ASC, ts DESC)";
+        List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
+            {
 
+                add(
+                        new StatementDef(
+                                "write-telemetry",
+                                "insert into <<KEYSPACE>>.<<TABLE>>_telemetry (source, epoch_hour, param, ts, data, cycle)\n" +
+                                        "     values (<<source>>,<<epoch_hour>>,<<param>>,<<ts>>,<<data>>,<<cycle>>);",
+                                ImmutableMap.<String, String>builder()
+                                        .put("source", "ThreadNumGenerator")
+                                        .put("epoch_hour", "DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH")
+                                        .put("param", "LineExtractGenerator:data/variable_words.txt")
+                                        .put("ts", "DateSequenceGenerator:1000")
+                                        .put("data", "LoremExtractGenerator:100:200")
+                                        .put("cycle", "CycleNumberGenerator")
+                                        .build()
+                        )
+                );
+            }
+        };
+
+        activityContext.readyStatementsTemplate = activityContext.initReadyStatementsTemplate(statementDefs);
 
         return activityContext;
 
@@ -122,6 +130,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
 
         if (cqlSharedContext.executionContext.getConfig().createSchema) {
             createSchema();
+            return;
         }
 
         timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
@@ -134,28 +143,9 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
         // To populate the namespace
         cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
 
-        List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
-            {
 
-                add(
-                        new StatementDef(
-                                "write-telemetry",
-                                "insert into <<KEYSPACE>>.<<TABLE>>_telemetry (source, epoch_hour, param, ts, data, cycle)\n" +
-                                        "     values (<<source>>,<<epoch_hour>>,<<param>>,<<ts>>,<<data>>,<<cycle>>);",
-                                ImmutableMap.<String, String>builder()
-                                        .put("source", "ThreadNumGenerator")
-                                        .put("epoch_hour", "DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH")
-                                        .put("param", "LineExtractGenerator:data/variable_words.txt")
-                                        .put("ts", "DateSequenceGenerator:1000")
-                                        .put("data", "LoremExtractGenerator:100:200")
-                                        .put("cycle", "CycleNumberGenerator")
-                                        .build()
-                        )
-                );
-            }
-        };
-        ReadyStatementsTemplate readyStatementsTemplate = cqlSharedContext.initReadyStatementsTemplate(statementDefs);
-        readyStatements = readyStatementsTemplate.bindAllGenerators(startCycle);
+//        ReadyStatementsTemplate readyStatementsTemplate = cqlSharedContext.initReadyStatementsTemplate(statementDefs);
+        readyStatements = cqlSharedContext.readyStatementsTemplate.bindAllGenerators(startCycle);
 
 
     }

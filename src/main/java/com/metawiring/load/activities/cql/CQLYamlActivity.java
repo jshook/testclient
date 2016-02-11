@@ -58,7 +58,7 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlAc
 
         this.maxAsync = maxAsync;
         this.endCycle = endCycle;
-        submittedCycle = startCycle - 1l;
+        submittedCycle = startCycle - 1L;
 
         if (activityContext.executionContext.getConfig().createSchema) {
             createSchema();
