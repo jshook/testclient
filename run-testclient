@@ -1,0 +1,46 @@
+#!/bin/bash
+
+export AUTO_INSTALL=${AUTO_INSTALL:-"true"}
+export FORCE_INSTALL=${FORCE_INSTALL:-"false"}
+export FETCH_ONLY=${FETCH_ONLY:-"false"}
+
+export TESTCLIENT_JARNAME="testclient.jar"
+export TESTCLIENT_RELEASE="latest-snapshot"
+export URL="https://github.com/jshook/testclient/releases/download/${TESTCLIENT_RELEASE}/${TESTCLIENT_JARNAME}"
+
+DOINSTALL="false"
+if [ ! -f "${TESTCLIENT_JARNAME}" -a "${AUTO_INSTALL}" = "true" ]
+then DOINSTALL="true"
+elif [ "${FORCE_INSTALL}" = "true" ]
+then DOINSTALL="true"
+fi
+
+if [ "${DOINSTALL}" = "true" ]
+then
+ printf 'fetching testclient from %s...\n' "${URL}" 1>&2
+ (
+  cd /tmp ;
+  wget --quiet --no-check-certificate --no-cookies \
+  "${URL}"
+ )
+ mv /tmp/testclient.jar ${TESTCLIENT_JARNAME}
+ printf "The testclient jar has been saved as %s\n" ${TESTCLIENT_JARNAME}
+fi
+
+if [ "${FETCH_ONLY}" = "true" ]
+then
+ printf "fetching client only, exiting\n" 1>&2
+ exit 0;
+fi;
+
+if [ -z "$*" ]
+then
+  printf "Pass additional arguments to this script, and they will be passed to testclient.jar\n" 1>&2
+  printf "To start, you need to provide --host <contact point> and at least one --activity=<def...>\n" 1>&2
+  printf "For more details, consult http://github.com/jshook/testclient\n" 1>&2
+  exit 2
+fi
+
+java -jar ${TESTKIT_LIBDIR}/${TESTCLIENT} \
+ $*
+
