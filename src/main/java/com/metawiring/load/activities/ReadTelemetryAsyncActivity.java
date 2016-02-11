@@ -60,6 +60,29 @@ public class ReadTelemetryAsyncActivity extends BaseActivity implements Activity
     @Override
     public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
         CQLActivityContext activityContext = new CQLActivityContext(def, genSource, executionContext);
+        List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
+            {
+
+                add(
+                        new StatementDef(
+                                "read-recent-telemetry",
+
+                                "     select * from <<KEYSPACE>>.<<TABLE>>_telemetry\n" +
+                                        "     where source=<<source>>\n" +
+                                        "     and epoch_hour=<<epoch_hour>>\n" +
+                                        "     and param=<<param>>\n" +
+                                        "     limit 10\n",
+
+                                ImmutableMap.<String, String>builder()
+                                        .put("source", "ThreadNumGenerator")
+                                        .put("epoch_hour", "DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH")
+                                        .put("param", "LineExtractGenerator:data/variable_words.txt")
+                                        .build()
+                        )
+                );
+            }
+        };
+        activityContext.readyStatementsTemplate = activityContext.initReadyStatementsTemplate(statementDefs);
         return activityContext;
     }
 
@@ -117,30 +140,7 @@ public class ReadTelemetryAsyncActivity extends BaseActivity implements Activity
         // To populate the namespace
         cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
 
-        List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
-            {
-
-                add(
-                        new StatementDef(
-                                "read-recent-telemetry",
-
-                                "     select * from <<KEYSPACE>>.<<TABLE>>_telemetry\n" +
-                                        "     where source=<<source>>\n" +
-                                        "     and epoch_hour=<<epoch_hour>>\n" +
-                                        "     and param=<<param>>\n" +
-                                        "     limit 10\n",
-
-                                ImmutableMap.<String, String>builder()
-                                        .put("source", "ThreadNumGenerator")
-                                        .put("epoch_hour", "DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH")
-                                        .put("param", "LineExtractGenerator:data/variable_words.txt")
-                                        .build()
-                        )
-                );
-            }
-        };
-        ReadyStatementsTemplate readyStatementsTemplate = cqlSharedContext.initReadyStatementsTemplate(statementDefs);
-        readyStatements = readyStatementsTemplate.bindAllGenerators(startCycle);
+     readyStatements = cqlSharedContext.readyStatementsTemplate.bindAllGenerators(startCycle);
 
 
     }

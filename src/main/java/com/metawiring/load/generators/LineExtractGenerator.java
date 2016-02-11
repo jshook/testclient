@@ -45,7 +45,7 @@ public class LineExtractGenerator implements Generator<String> {
     public LineExtractGenerator(String filename) {
         this.filename = filename;
         loadLines(this.filename);
-        itemDistribution= new UniformIntegerDistribution(rng, 0, lines.size()-1);
+        itemDistribution= new UniformIntegerDistribution(rng, 0, lines.size()-2);
     }
 
     @Override
