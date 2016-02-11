@@ -41,6 +41,6 @@ then
   exit 2
 fi
 
-java -jar ${TESTKIT_LIBDIR}/${TESTCLIENT} \
+java -jar ${TESTCLIENT_JARNAME} \
  $*
 
