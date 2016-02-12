@@ -21,20 +21,20 @@ package com.metawiring.load.activities;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
-import com.datastax.driver.core.*;
+import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.collect.ImmutableMap;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.StatementDef;
 import com.metawiring.load.core.ExecutionContext;
 import com.metawiring.load.core.ReadyStatements;
-import com.metawiring.load.core.ReadyStatementsTemplate;
 import com.metawiring.load.generator.GeneratorBindingList;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -45,9 +45,9 @@ import static com.codahale.metrics.MetricRegistry.name;
  * This should be written in more of a pipeline way, with consumer and producer pools, but not now.
  */
 @SuppressWarnings("ALL")
-public class WriteTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext> {
+public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext> {
 
-    private static Logger logger = LoggerFactory.getLogger(WriteTelemetryAsyncActivity.class);
+    private static Logger logger = LoggerFactory.getLogger(WriteTelemetryBatchAsyncActivity.class);
 
     private long endCycle, submittedCycle;
     private int pendingRq = 0;
@@ -56,6 +56,8 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
     private GeneratorBindingList generatorBindingList;
     private CQLActivityContext cqlSharedContext;
     private ReadyStatements readyStatements;
+    private int batchsize = Integer.valueOf(System.getProperty("batchsize","1000"));
+    private BatchStatement.Type batchtype = BatchStatement.Type.valueOf(System.getProperty("batchtype","LOGGED"));
 
     @Override
     public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
@@ -102,7 +104,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
     private class TimedResultSetFuture {
         ResultSetFuture rsFuture;
         Timer.Context timerContext;
-        BoundStatement boundStatement;
+        BatchStatement batchStatement;
         int tries = 0;
     }
 
@@ -132,12 +134,12 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
             createSchema();
         }
 
-        timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
-        timerWaits = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
+        timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "ops-total"));
+        timerWaits = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "ops-wait"));
 
-        activityAsyncPendingCounter = cqlSharedContext.getExecutionContext().getMetrics().counter(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
+        activityAsyncPendingCounter = cqlSharedContext.getExecutionContext().getMetrics().counter(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "async-pending"));
 
-        triesHistogram = cqlSharedContext.getExecutionContext().getMetrics().histogram(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
+        triesHistogram = cqlSharedContext.getExecutionContext().getMetrics().histogram(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "tries-histogram"));
 
         // To populate the namespace
         cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
@@ -205,9 +207,9 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
             try {
 
                 TimedResultSetFuture trsf = new TimedResultSetFuture();
-                trsf.boundStatement = readyStatements.getNext(submittingCycle).bind();
+                trsf.batchStatement = createBatch(submittingCycle,readyStatements,batchsize);
                 trsf.timerContext = timerOps.time();
-                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.boundStatement);
+                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.batchStatement);
                 trsf.tries++;
 
                 timedResultSetFutures.add(trsf);
@@ -243,7 +245,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
                     waitTimer.stop();
                 }
                 instrumentException(e);
-                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.boundStatement);
+                trsf.rsFuture = cqlSharedContext.session.executeAsync(trsf.batchStatement);
                 try {
                     Thread.sleep(trsf.tries * 100l);
                 } catch (InterruptedException ignored) {
@@ -257,6 +259,18 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements Activit
         long duration = trsf.timerContext.stop();
         triesHistogram.update(trsf.tries);
 
+    }
+
+    private BatchStatement createBatch(long submittingCycle, ReadyStatements readyStatements, int batchsize) {
+        logger.debug("Creating new " + batchtype + " batch with " + batchsize + " rows");
+
+        BatchStatement batchStatement = new BatchStatement(batchtype);
+        for (int i = 0; i < batchsize; i++) {
+            BoundStatement boundStatement = readyStatements.getNext(submittingCycle+i).bind();
+            batchStatement.add(boundStatement);
+        }
+
+        return batchStatement;
     }
 
 }
