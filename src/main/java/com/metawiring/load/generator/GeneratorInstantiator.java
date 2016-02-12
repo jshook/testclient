@@ -53,7 +53,7 @@ public class GeneratorInstantiator implements GeneratorInstanceSource {
 
         try {
             generatorClass = (Class<Generator>) Class.forName(className);
-            logger.debug("Initialized class:" + generatorClass.getSimpleName() + " for generator type: " + generatorSpec);
+            logger.debug("HasInitialized class:" + generatorClass.getSimpleName() + " for generator type: " + generatorSpec);
             return generatorClass;
         } catch (ClassNotFoundException e) {
             logger.error("Unable to map generator class " + generatorSpec);

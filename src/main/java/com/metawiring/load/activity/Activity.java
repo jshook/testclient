@@ -18,11 +18,6 @@
 
 package com.metawiring.load.activity;
 
-import com.metawiring.load.activities.RuntimeContext;
-import com.metawiring.load.core.ExecutionContext;
-import com.metawiring.load.generator.GeneratorInstanceSource;
-import com.metawiring.load.generator.ScopedCachingGeneratorSource;
-
 /**
  * An activity represents a single type of operation. It may be iterated many times, perhaps even separately
  * in different threads. (non-shared)
@@ -49,11 +44,6 @@ public interface Activity {
      * @param maxAsync - total number of async operations this activity can have pending
      */
     void prepare(long startingCycle, long endingCycle, long maxAsync);
-
-    /**
-     * Create the schema for this activity. This should always use "if not exists" if possible.
-     */
-    void createSchema();
 
     /**
      * Called endingCycle - startingCycle  times after the {@link #prepare(long,long,long)} method

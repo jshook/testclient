@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -32,7 +33,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * When the ActivityDef is modified, interested activity threads are notified so that
  * they can dynamically adjust.</p>
  *
- * <p>The canonical values for all parameters are kept internally in the parameter map.</p>
+ * <p>The canonical values for all parameters are kept internally in the parameter map.
+ * Essentially, ActivityDef is just a type-aware wrapper around a thread-safe parameter map,
+ * so the change counter which is provided is simply that of the underlying parameter map.</p>
  */
 public class ActivityDef {
 
@@ -70,12 +73,14 @@ public class ActivityDef {
     private static String[] field_list = new String[] {
             FIELD_ALIAS, FIELD_SOURCE, FIELD_CYCLES, FIELD_THREADS, FIELD_ASYNC, FIELD_DELAY
     };
+//    private final AtomicInteger atomicThreadTarget = new AtomicInteger(0);
 
     public ActivityDef(String parameterString) {
         this.parameterMap = ParameterMap.parsePositional(parameterString, field_list);
     }
     protected ActivityDef(ParameterMap parameterMap) {
         this.parameterMap = parameterMap;
+//        updateAtomicThreadLevel();
     }
 
     public static Optional<ActivityDef> parseActivityDefOptionally(String namedActivitySpec) {
@@ -93,8 +98,12 @@ public class ActivityDef {
         return activityDef;
     }
 
+//    private void updateAtomicThreadLevel() {
+//        this.atomicThreadTarget.set(getThreads());
+//    }
+
     public String toString() {
-        return parameterMap.toString();
+        return "ActivityDef:" + parameterMap.toString();
     }
 
     public String getAlias() {
@@ -160,18 +169,22 @@ public class ActivityDef {
     public void setStartCycle(long startCycle) {
         parameterMap.set("cycles","" + startCycle + ".." + getEndCycle());
     }
-    protected void setEndCycle(long endCycle) {
+    public void setEndCycle(long endCycle) {
         parameterMap.set(FIELD_CYCLES,"" + getStartCycle() + ".." + endCycle);
     }
-    protected void setThreads(int threads) {
+    public void setThreads(int threads) {
         parameterMap.set(FIELD_THREADS,threads);
+//        updateAtomicThreadLevel();
     }
-    protected void setAsync(int async) {
+    public void setAsync(int async) {
         parameterMap.set(FIELD_ASYNC,async);
     }
-    protected void updateDelay(int delay) {
+    public void setDelay(int delay) {
         parameterMap.set(FIELD_DELAY,delay);
     }
 
+    public String getLogName() {
+        return toString();
+    }
 
 }

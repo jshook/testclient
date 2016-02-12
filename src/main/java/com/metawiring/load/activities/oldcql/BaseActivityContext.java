@@ -16,21 +16,18 @@
  *
  */
 
-package com.metawiring.load.activities.cql;
+package com.metawiring.load.activities.oldcql;
 
 import com.metawiring.load.config.ActivityDef;
-import com.metawiring.load.core.ExecutionContext;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 public class BaseActivityContext implements ActivityContext {
     private final ScopedCachingGeneratorSource scopedCachingGeneratorSource;
     private final ActivityDef activityDef;
-    private final ExecutionContext executionContext;
 
-    public BaseActivityContext(ActivityDef activityDef, ScopedCachingGeneratorSource scopedCachingGeneratorSource, ExecutionContext executionContext) {
+    public BaseActivityContext(ActivityDef activityDef, ScopedCachingGeneratorSource scopedCachingGeneratorSource) {
         this.activityDef = activityDef;
         this.scopedCachingGeneratorSource = scopedCachingGeneratorSource;
-        this.executionContext = executionContext;
     }
 
     @Override
@@ -41,11 +38,6 @@ public class BaseActivityContext implements ActivityContext {
     @Override
     public ScopedCachingGeneratorSource getActivityGeneratorSource() {
         return scopedCachingGeneratorSource;
-    }
-
-    @Override
-    public ExecutionContext getExecutionContext() {
-        return executionContext;
     }
 
 }

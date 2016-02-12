@@ -68,7 +68,7 @@ public class TestClientCLIOptions {
         graphite = parser.accepts("graphite").withRequiredArg().ofType(String.class)
                 .describedAs("The host and port in host or host:port form for graphite reporting");
 
-        // Try to get the client name in client-A-B-C-D form, or just leave it as client-unknownaddr
+        // Try to getMotor the client name in client-A-B-C-D form, or just leave it as client-unknownaddr
         String defaultClientName = "client-unknownaddr";
         try {
             defaultClientName = "client-"+ InetAddress.getLocalHost().getHostAddress().replaceAll("\\.","-");

@@ -19,6 +19,7 @@
 package com.metawiring.load.core;
 
 import com.datastax.driver.core.Session;
+import com.metawiring.load.config.ParameterMap;
 import com.metawiring.load.config.StatementDef;
 import com.metawiring.load.config.TestClientConfig;
 import com.metawiring.load.config.YamlActivityDef;
@@ -34,13 +35,16 @@ import java.util.stream.Collectors;
 public class ReadyStatementsTemplate {
     private final Session session;
     private final ScopedCachingGeneratorSource generatorSource;
+    private final ParameterMap activityParameters;
     private List<ReadyStatementTemplate> readyStatementTemplates = new ArrayList<>();
-    private TestClientConfig testClientConfig;
 
-    public ReadyStatementsTemplate(Session session, ScopedCachingGeneratorSource generatorSource, TestClientConfig testClientConfig) {
+    public ReadyStatementsTemplate(
+            Session session,
+            ScopedCachingGeneratorSource generatorSource,
+            ParameterMap activityParameters) {
         this.session = session;
         this.generatorSource = generatorSource;
-        this.testClientConfig = testClientConfig;
+        this.activityParameters = activityParameters;
     }
 
     public ReadyStatementsTemplate addStatementDefs(List<StatementDef> statementDefs) {
@@ -58,9 +62,15 @@ public class ReadyStatementsTemplate {
         switch (statementSection.toLowerCase()) {
             case "ddl":
                 addStatementDefs(yamlActivityDef.getDdl());
+                for (StatementDef statementDef : yamlActivityDef.getDdl()) {
+                    readyStatementTemplates.add(new ReadyStatementTemplate(statementDef, generatorSource, activityParameters));
+                }
                 break;
             case "dml":
                 addStatementDefs(yamlActivityDef.getDml());
+                for (StatementDef statementDef : yamlActivityDef.getDml()) {
+                    readyStatementTemplates.add(new ReadyStatementTemplate(statementDef, generatorSource, activityParameters));
+                }
                 break;
             default:
                 throw new RuntimeException("Currently supported statement sections are ddl and dml, not " + statementSection.toLowerCase());

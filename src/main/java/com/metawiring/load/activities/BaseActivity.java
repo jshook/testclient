@@ -19,27 +19,19 @@
 package com.metawiring.load.activities;
 
 import com.metawiring.load.activity.Activity;
-import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.core.MetricsContext;
+import com.metawiring.load.core.OldExecutionContext;
 import com.metawiring.load.core.IndexedThreadFactory;
 import com.metawiring.load.generator.GeneratorBindingList;
 import com.metawiring.load.generator.GeneratorInstanceSource;
-import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
 public abstract class BaseActivity implements Activity {
-    protected ExecutionContext context;
+    protected OldExecutionContext context;
     protected String activityName;
     protected boolean diagnoseExceptions = true;
     protected GeneratorInstanceSource generatorInstanceSource;
-
-//    @Override
-//    public final void init(String activityName, ExecutionContext context, ScopedCachingGeneratorSource generatorInstanceSource) {
-//        this.activityName=activityName;
-//        this.context = context;
-//        this.diagnoseExceptions = context.getConfig().diagnoseExceptions;
-//        this.generatorInstanceSource = generatorInstanceSource;
-//    }
 
     @Override
     public void cleanup() { }
@@ -60,7 +52,7 @@ public abstract class BaseActivity implements Activity {
 
     protected void instrumentException(Exception e) {
         String exceptionType = e.getClass().getSimpleName();
-        context.getMetrics().meter(name(getClass().getSimpleName(), "exceptions", exceptionType)).mark();
+        MetricsContext.metrics().meter(name(getClass().getSimpleName(), "exceptions", exceptionType)).mark();
         if (diagnoseExceptions) {
             throw new RuntimeException(e);
         }

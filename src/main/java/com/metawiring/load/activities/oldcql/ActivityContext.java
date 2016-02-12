@@ -16,14 +16,12 @@
  *
  */
 
-package com.metawiring.load.activities.cql;
+package com.metawiring.load.activities.oldcql;
 
 import com.metawiring.load.config.ActivityDef;
-import com.metawiring.load.core.ExecutionContext;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 public interface ActivityContext {
     ActivityDef getActivityDef();
     ScopedCachingGeneratorSource getActivityGeneratorSource();
-    ExecutionContext getExecutionContext();
 }

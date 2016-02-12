@@ -29,15 +29,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class MetricReporters {
+public class MetricReporters implements IShutdown {
     private final static Logger logger = LoggerFactory.getLogger(MetricReporters.class);
     private static MetricReporters instance = new MetricReporters();
-
 
     private List<PrefixedRegistry> metricRegistries = new ArrayList<>();
     private List<ScheduledReporter> scheduledReporters = new ArrayList<>();
 
     private MetricReporters() {
+        ShutdownManager.register(this);
     }
 
     public static MetricReporters getInstance() {
@@ -127,6 +127,13 @@ public class MetricReporters {
             scheduledReporter.report();
         }
         return this;
+    }
+
+    public void shutdown() {
+        for (ScheduledReporter reporter : scheduledReporters) {
+            reporter.report();
+            reporter.stop();
+        }
     }
 
     private class PrefixedRegistry {

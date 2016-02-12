@@ -18,39 +18,31 @@
 
 package com.metawiring.load.core;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.ScheduledReporter;
-import com.datastax.driver.core.*;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ProtocolOptions;
+import com.datastax.driver.core.Session;
 import com.metawiring.load.config.TestClientConfig;
-import com.metawiring.load.generator.*;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class ExecutionContext {
+public class OldExecutionContext {
 
     private TestClientConfig config;
     private Cluster cluster;
     private Session session;
-    private MetricRegistry metrics = new MetricRegistry();
-    private List<ScheduledReporter> reporters = new ArrayList<ScheduledReporter>();
-//    private ScopedCachingGeneratorSource generatorInstanceSource = new ScopedGeneratorCache(new GeneratorInstantiator());
     private long startedAt = System.currentTimeMillis();
     private long endedAt = startedAt;
-
-    public ExecutionContext(TestClientConfig config) {
-        this.config = config;
-    }
 
     public TestClientConfig getConfig() {
         return config;
     }
 
+    public OldExecutionContext(TestClientConfig config) {
+        this.config = config;
+    }
+
     public void startup() {
 
         Cluster.Builder builder = Cluster.builder()
-                .withTimestampGenerator(ServerSideTimestampGenerator.INSTANCE)
                 .addContactPoint(config.host)
                 .withPort(config.port)
                 .withCompression(ProtocolOptions.Compression.NONE);
@@ -66,10 +58,6 @@ public class ExecutionContext {
 
     }
 
-    public MetricRegistry getMetrics() {
-        return metrics;
-    }
-
     public Session getSession() {
         return session;
     }
@@ -79,12 +67,7 @@ public class ExecutionContext {
 //    }
 
     public void shutdown() {
-
         cluster.close();
-        for (ScheduledReporter reporter : reporters) {
-            reporter.report();
-            reporter.stop();
-        }
     }
 
     public String getSummary() {

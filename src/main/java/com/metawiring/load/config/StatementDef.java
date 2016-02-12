@@ -19,15 +19,13 @@
 package com.metawiring.load.config;
 
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StatementDef {
-    public String name="";
-    public String cql="";
-    public Map<String,String> bindings = new HashMap<String,String>();
-    private String[] bindNames;
+    public String name = "";
+    public String cql = "";
+    public Map<String, String> bindings = new HashMap<>();
 
     public StatementDef() {
     }
@@ -39,6 +37,7 @@ public class StatementDef {
     }
 
     Pattern bindableRegex = Pattern.compile("<<(\\w+)>>");
+
     /**
      * @return bindableNames in order as specified in the parameter placeholders
      */
@@ -52,23 +51,29 @@ public class StatementDef {
     }
 
     public List<String> getBindNamesExcept(String... exceptNames) {
-        Set<String> exceptNamesSet = new HashSet<String>();
+        Set<String> exceptNamesSet = new HashSet<>();
         Arrays.asList(exceptNames).stream().map(String::toLowerCase).forEach(exceptNamesSet::add);
-        List<String> names = new ArrayList<String>();
+        List<String> names = new ArrayList<>();
         List<String> allBindNames = getBindNames();
         allBindNames.stream().filter(s -> !exceptNamesSet.contains(s.toLowerCase())).forEach(names::add);
         return names;
     }
 
     /**
+     * @param config The parameters which may be needed to qualify token substitutions.
+     *               <ul>
+     *               <li>keyspace</li>
+     *               <li>table</li>
+     *               <li>rf</li>
+     *               </ul>
      * @return CQL statement with '?' in place of the bindable parameters, suitable for preparing
      */
-    public String getCookedStatement(TestClientConfig config) {
+    public String getCookedStatement(ParameterMap config) {
         String statement = cql;
-        statement = statement.replaceAll("<<KEYSPACE>>", config.keyspace);
-        statement = statement.replaceAll("<<TABLE>>", config.table);
-        statement = statement.replaceAll("<<RF>>", String.valueOf(config.defaultReplicationFactor));
-        statement = statement.replaceAll("<<\\w+>>","?");
+        statement = statement.replaceAll("<<KEYSPACE>>", config.getStringOrDefault("keyspace", "default"));
+        statement = statement.replaceAll("<<TABLE>>", config.getStringOrDefault("table", "default"));
+        statement = statement.replaceAll("<<RF>>", String.valueOf(config.getStringOrDefault("rf", "1")));
+        statement = statement.replaceAll("<<\\w+>>", "?");
         return statement;
     }
 }

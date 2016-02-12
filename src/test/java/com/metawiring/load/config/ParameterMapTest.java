@@ -77,29 +77,29 @@ public class ParameterMapTest {
 
     @Test
     public void testPositionalParsing() {
-        ParameterMap matchingNumbers = ParameterMap.parsePositional("1;2",new String[] { "one", "two", "three"});
+        ParameterMap matchingNumbers = ParameterMap.parsePositional("1;2", new String[]{"one", "two", "three"});
         assertThat(matchingNumbers.getSize()).isEqualTo(2);
-        assertThat(matchingNumbers.getIntOrDefault("one",5)).isEqualTo(1);
-        assertThat(matchingNumbers.getStringOrDefault("two","default")).isEqualTo("2");
+        assertThat(matchingNumbers.getIntOrDefault("one", 5)).isEqualTo(1);
+        assertThat(matchingNumbers.getStringOrDefault("two", "default")).isEqualTo("2");
     }
 
     @Test(expectedExceptions = RuntimeException.class,
-            expectedExceptionsMessageRegExp = ".*exceed number of named fields.*")
+            expectedExceptionsMessageRegExp = ".*ran out of positional field names.*")
     public void testFieldNameUnderrun() {
-        ParameterMap underrun = ParameterMap.parsePositional("1;2;3;4;",new String[] { "one", "two", "three"});
+        ParameterMap underrun = ParameterMap.parsePositional("1;2;3;4;", new String[]{"one", "two", "three"});
     }
 
     @Test
     public void testSetSignatures() {
-        ParameterMap matchingNumbers = ParameterMap.parsePositional("1;2;3.0;",new String[] { "one", "two", "three"});
+        ParameterMap matchingNumbers = ParameterMap.parsePositional("1;2;3.0;", new String[]{"one", "two", "three"});
         AtomicLong changeCounter = matchingNumbers.getChangeCounter();
         assertThat(changeCounter.get()).isEqualTo(0L);
-        assertThat(matchingNumbers.getDoubleOrDefault("three",4.0D)).isEqualTo(3.0D);
-        matchingNumbers.set("three",2.7777D);
+        assertThat(matchingNumbers.getDoubleOrDefault("three", 4.0D)).isEqualTo(3.0D);
+        matchingNumbers.set("three", 2.7777D);
         assertThat(changeCounter.get()).isEqualTo(1L);
-        assertThat(matchingNumbers.getDoubleOrDefault("three",9.8D)).isEqualTo(2.7777D);
-        matchingNumbers.set("three","seventeen");
+        assertThat(matchingNumbers.getDoubleOrDefault("three", 9.8D)).isEqualTo(2.7777D);
+        matchingNumbers.set("three", "seventeen");
         assertThat(changeCounter.get()).isEqualTo(2L);
-        assertThat(matchingNumbers.getStringOrDefault("three","whoops")).isEqualTo("seventeen");
+        assertThat(matchingNumbers.getStringOrDefault("three", "whoops")).isEqualTo("seventeen");
     }
 }

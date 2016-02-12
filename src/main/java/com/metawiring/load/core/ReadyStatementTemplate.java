@@ -20,8 +20,8 @@ package com.metawiring.load.core;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
+import com.metawiring.load.config.ParameterMap;
 import com.metawiring.load.config.StatementDef;
-import com.metawiring.load.config.TestClientConfig;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 import java.util.Optional;
@@ -34,16 +34,24 @@ import java.util.Optional;
 public class ReadyStatementTemplate {
     private final StatementDef statementDef;
     private final TestClientConfig testClientConfig;
+    private final StatementDef yamlStatementDef;
+    private final ParameterMap activityParameters;
     private PreparedStatement preparedStatement;
     private ScopedCachingGeneratorSource generatorSource;
 
+    public ReadyStatementTemplate(
+            StatementDef yamlStatementDef,
+            ScopedCachingGeneratorSource generatorSource,
+            ParameterMap activityParameters) {
+        this.yamlStatementDef = yamlStatementDef;
     public ReadyStatementTemplate(StatementDef statementDef, ScopedCachingGeneratorSource generatorSource, TestClientConfig testClientConfig) {
         this.statementDef = statementDef;
         this.generatorSource = generatorSource;
-        this.testClientConfig = testClientConfig;
+        this.activityParameters = activityParameters;
     }
 
     public void prepare(Session session) {
+        preparedStatement = session.prepare(yamlStatementDef.getCookedStatement(activityParameters));
         preparedStatement = session.prepare(statementDef.getCookedStatement(testClientConfig));
     }
 

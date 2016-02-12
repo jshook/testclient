@@ -18,14 +18,9 @@
 
 package com.metawiring.load.activities;
 
-import com.metawiring.load.config.TestClientConfig;
-import com.metawiring.load.config.YamlActivityDef;
-import com.metawiring.load.core.ExecutionContext;
 import org.testng.annotations.Test;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.testng.Assert.*;
 
 @Test
 public class CQLYamlActivityTest {

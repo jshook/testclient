@@ -19,7 +19,7 @@
 package com.metawiring.load.activity;
 
 import com.metawiring.load.activities.WriteTelemetryAsyncActivity;
-import com.metawiring.load.activities.cql.CQLYamlActivity;
+import com.metawiring.load.activities.oldcql.CQLYamlActivity;
 import com.metawiring.load.activity.locators.*;
 import com.metawiring.load.config.ActivityDef;
 import org.slf4j.Logger;

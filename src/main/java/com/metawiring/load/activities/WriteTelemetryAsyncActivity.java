@@ -28,6 +28,7 @@ import com.metawiring.load.config.StatementDef;
 import com.metawiring.load.core.ExecutionContext;
 import com.metawiring.load.core.ReadyStatements;
 import com.metawiring.load.core.ReadyStatementsTemplate;
+import com.metawiring.load.core.MetricsContext;
 import com.metawiring.load.generator.GeneratorBindingList;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ import static com.codahale.metrics.MetricRegistry.name;
  */
 @SuppressWarnings("ALL")
 public class WriteTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext> {
+public class WriteTelemetryAsyncActivity extends BaseActivity implements CanCreateSchema {
 
     private static Logger logger = LoggerFactory.getLogger(WriteTelemetryAsyncActivity.class);
 

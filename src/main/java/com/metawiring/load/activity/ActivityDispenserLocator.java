@@ -18,9 +18,6 @@
 
 package com.metawiring.load.activity;
 
-import com.metawiring.load.activities.ActivityType;
-import com.metawiring.load.activities.RuntimeContext;
-import com.metawiring.load.activity.ActivityDispenser;
 import com.metawiring.load.config.ActivityDef;
 
 import java.util.Optional;

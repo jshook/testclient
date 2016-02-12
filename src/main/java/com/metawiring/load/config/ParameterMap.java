@@ -14,10 +14,7 @@
 */
 package com.metawiring.load.config;
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -29,15 +26,16 @@ import java.util.stream.Collectors;
  * An atomic change counter tracks updates, to allow interested consumers to determine
  * when to re-read values across threads. The basic format is
  * &lt;paramname&gt;=&lt;paramvalue&gt;;...</p>
- *
+ * <p/>
  * <p>To create a parameter map, use one of the static parse... methods.</p>
- *
+ * <p/>
  * <p>No native types are used internally. Everything is encoded as a String.</p>
  */
 public class ParameterMap {
 
     private final ConcurrentHashMap<String, String> paramMap = new ConcurrentHashMap<>(10);
     private final AtomicLong changeCounter = new AtomicLong(0L);
+    private final LinkedList<Listener> listeners = new LinkedList<>();
 
     private ParameterMap(Map<String, String> valueMap) {
         paramMap.putAll(valueMap);
@@ -63,6 +61,11 @@ public class ParameterMap {
         return i.map(Integer::valueOf).orElse(defaultIntValue);
     }
 
+    public boolean getBoolOrDefault(String paramName, boolean defaultBoolValue) {
+        Optional<String> b = Optional.ofNullable(paramMap.get(paramName));
+        return b.map(Boolean::valueOf).orElse(defaultBoolValue);
+    }
+
 
     public Long takeLongOrDefault(String paramName, Long defaultLongValue) {
         Optional<String> l = Optional.ofNullable(paramMap.remove(paramName));
@@ -70,18 +73,21 @@ public class ParameterMap {
         markMutation();
         return lval;
     }
+
     public Double takeDoubleOrDefault(String paramName, double defaultDoubleValue) {
         Optional<String> d = Optional.ofNullable(paramMap.remove(paramName));
         Double dval = d.map(Double::valueOf).orElse(defaultDoubleValue);
         markMutation();
         return dval;
     }
+
     public String takeStringOrDefault(String paramName, String defaultStringValue) {
         Optional<String> s = Optional.ofNullable(paramMap.remove(paramName));
         String sval = s.orElse(defaultStringValue);
         markMutation();
         return sval;
     }
+
     public int takeIntOrDefault(String paramName, int paramDefault) {
         Optional<String> i = Optional.ofNullable(paramMap.remove(paramName));
         int ival = i.map(Integer::valueOf).orElse(paramDefault);
@@ -89,8 +95,16 @@ public class ParameterMap {
         return ival;
     }
 
+    public boolean takeBoolOrDefault(String paramName, boolean defaultBoolValue) {
+        Optional<String> b = Optional.ofNullable(paramMap.remove(paramName));
+        boolean bval = b.map(Boolean::valueOf).orElse(defaultBoolValue);
+        markMutation();
+        return bval;
+    }
+
+
     public void set(String paramName, Object newValue) {
-        paramMap.put(paramName,String.valueOf(newValue));
+        paramMap.put(paramName, String.valueOf(newValue));
         markMutation();
     }
 
@@ -140,23 +154,32 @@ public class ParameterMap {
 
     /**
      * Parse positional parameters, each suffixed with the ';' terminator.
-     * @param encodedParams parameter string
-     * @param fieldEnums values() of enums for mapping ordinals to field name values
+     * This form simply allows for the initial parameter names to be elided, so long as they
+     * are sure to match up with a well-known order. This method cleans up the input, injecting
+     * the field names as necessary, and then calls the normal parsing logic.
+     *
+     * @param encodedParams     parameter string
+     * @param defaultFieldNames the well-known field ordering
      * @return a new ParameterMap, if parsing was successful
      */
-    public static ParameterMap parsePositional(String encodedParams, String[] fieldEnums) {
+    public static ParameterMap parsePositional(String encodedParams, String[] defaultFieldNames) {
 
         String[] splitAtSemi = encodedParams.split(";");
-        if (splitAtSemi.length > fieldEnums.length) {
-            throw new RuntimeException("positional param values exceed number of named fields:"
-                    + " names:" + Arrays.toString(fieldEnums)
-                    + ", values: " + Arrays.toString(splitAtSemi));
-        }
+
 
         for (int wordidx = 0; wordidx < splitAtSemi.length; wordidx++) {
 
             if (!splitAtSemi[wordidx].contains("=")) {
-                splitAtSemi[wordidx] = fieldEnums[wordidx] + "=" + splitAtSemi[wordidx] +";";
+
+                if (wordidx > (defaultFieldNames.length - 1)) {
+                    throw new RuntimeException("positional param (without var=val; format) ran out of "
+                            + "positional field names:"
+                            + " names:" + Arrays.toString(defaultFieldNames)
+                            + ", values: " + Arrays.toString(splitAtSemi)
+                    );
+                }
+
+                splitAtSemi[wordidx] = defaultFieldNames[wordidx] + "=" + splitAtSemi[wordidx] + ";";
             }
             if (!splitAtSemi[wordidx].endsWith(";")) {
                 splitAtSemi[wordidx] = splitAtSemi[wordidx] + ";";
@@ -178,11 +201,38 @@ public class ParameterMap {
 
     private void markMutation() {
         changeCounter.incrementAndGet();
+        callListeners();
     }
 
+    /**
+     * Get the atomic change counter for this parameter map.
+     * It getes incremented whenever any changes are made to the map.
+     *
+     * @return the atomic long change counter
+     */
     public AtomicLong getChangeCounter() {
         return changeCounter;
     }
 
+    public String toString() {
+        return paramMap.toString();
+    }
 
+    public void addListener(Listener listener) {
+        listeners.add(listener);
+    }
+
+    public void removeListener(Listener listener) {
+        listeners.remove(listener);
+    }
+
+    private void callListeners() {
+        for (Listener listener : listeners) {
+            listener.handleParameterMapUpdate(this);
+        }
+    }
+
+    public static interface Listener {
+        void handleParameterMapUpdate(ParameterMap parameterMap);
+    }
 }

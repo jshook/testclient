@@ -19,7 +19,7 @@
 package com.metawiring.load.activities;
 
 import com.metawiring.load.config.ActivityDef;
-import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.core.OldExecutionContext;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 
 public interface ActivityContextAware<C> {
@@ -32,7 +32,7 @@ public interface ActivityContextAware<C> {
      * @return A single shared context object instance of generic type C, to be used by all instances of this logical
      * activity.
      */
-    C createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext);
+    C createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, OldExecutionContext executionContext);
 
     /**
      * Each logical instance of the activity should load the context. This method will be called by whatever harness

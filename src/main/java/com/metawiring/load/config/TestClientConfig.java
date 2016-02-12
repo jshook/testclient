@@ -28,22 +28,31 @@ import java.util.List;
  */
 public class TestClientConfig {
 
-    public final String host;
-    public final int port;
-    public final List<ActivityDef> activities;
-    public final String graphiteHost,metricsPrefix;
-    public final int graphitePort;
-    public final String keyspace;
-    public final String table;
-    public final boolean createSchema;
-    public final String user;
-    public final String password;
-    public final ConsistencyLevel defaultConsistencyLevel;
-    public final int defaultReplicationFactor;
-    public final boolean splitCycles;
-    public final boolean diagnoseExceptions;
+    // Making these fields mutable for now to experiment with Nashorn usage patterns
 
-    private TestClientConfig(
+    public String host;
+    public int port;
+    public List<ActivityDef> activities;
+    public String graphiteHost,metricsPrefix;
+    public int graphitePort;
+    public String keyspace;
+    public String table;
+    public boolean createSchema;
+    public String user;
+    public String password;
+    public ConsistencyLevel defaultConsistencyLevel;
+    public int defaultReplicationFactor;
+    public boolean splitCycles;
+    public boolean diagnoseExceptions;
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * You probably want to use the static builder() method instead of calling this onerous constructor.
+     */
+    public TestClientConfig(
             String host, int port,
             List<ActivityDef> activityDefs,
             String metricsPrefix,
@@ -76,9 +85,6 @@ public class TestClientConfig {
         this.diagnoseExceptions = diagnoseExceptions;
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
 
     public static class Builder {
 

@@ -27,24 +27,29 @@ import java.util.concurrent.Callable;
 
 public class TestPhaseClient implements Callable<Result> {
 
-    ExecutionContext context;
+    OldExecutionContext context;
     private static Logger logger = org.slf4j.LoggerFactory.getLogger(TestPhaseClient.class);
 
     public TestPhaseClient configure(String[] args) {
         TestClientConfig config = new TestClientCLIOptions().parse(args);
-        context = new ExecutionContext(config);
+        context = new OldExecutionContext(config);
+        return this;
+    }
+
+    public TestPhaseClient configure(TestClientConfig config) {
+        context = new OldExecutionContext(config);
         return this;
     }
 
     @Override
     public Result call() throws Exception {
 
-        MetricRegistry metrics = context.getMetrics();
+//        MetricRegistry metrics = MetricsContext.metrics();
         MetricReporters reporters = MetricReporters.getInstance();
         TestClientConfig config = context.getConfig();
 
 
-        ActivityExecutorService executorService = new ActivityExecutorService();
+        OldActivityExecutorService executorService = new OldActivityExecutorService();
         logger.info("Executing main client logic");
         executorService.prepare(context);
 
@@ -52,7 +57,7 @@ public class TestPhaseClient implements Callable<Result> {
 
         // Registries come before reporters
         reporters.addRegistry("driver",context.getSession().getCluster().getMetrics().getRegistry());
-        reporters.addRegistry("testclient",metrics);
+        reporters.addRegistry("testclient",MetricsContext.metrics());
         reporters.addLogger();
         if (config.graphiteHost != null && !config.graphiteHost.isEmpty()) {
             logger.info("Adding graphite reporter: host="
@@ -67,6 +72,7 @@ public class TestPhaseClient implements Callable<Result> {
         Result result = new Result(context);
         context.shutdown();
 
+        ShutdownManager.shutdown();
         reporters.report().stop();
 
         return result;

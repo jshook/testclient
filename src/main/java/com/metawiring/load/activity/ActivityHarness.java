@@ -20,8 +20,9 @@ package com.metawiring.load.activity;
 
 import com.codahale.metrics.Counter;
 import com.metawiring.load.activities.ActivityContextAware;
-import com.metawiring.load.activities.cql.ActivityContext;
-import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.activities.oldcql.ActivityContext;
+import com.metawiring.load.core.MetricsContext;
+import com.metawiring.load.core.OldExecutionContext;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +37,12 @@ public class ActivityHarness implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(ActivityHarness.class);
 
     private final ActivityDispenser activityDispenser;
-    private final ExecutionContext context;
+    private final OldExecutionContext context;
     private final long startCycle, endCycle, maxAsync, interCycleDelay;
     private final ScopedCachingGeneratorSource scopedGeneratorSource;
     private final ActivityContext activityContext;
 
-    public ActivityHarness(ActivityDispenser ActivityDispenser, ExecutionContext context, ScopedCachingGeneratorSource scopedGeneratorSource, long startCycle, long endCycle, long maxAsync, int interCycleDelay, ActivityContext activityContext) {
+    public ActivityHarness(ActivityDispenser ActivityDispenser, OldExecutionContext context, ScopedCachingGeneratorSource scopedGeneratorSource, long startCycle, long endCycle, long maxAsync, int interCycleDelay, ActivityContext activityContext) {
         this.activityDispenser = ActivityDispenser;
         this.context = context;
         this.startCycle = startCycle;
@@ -64,7 +65,7 @@ public class ActivityHarness implements Runnable {
 //        activity.init(activityDispenser.getActivityName(), context, scopedGeneratorSource);
         activity.prepare(startCycle, endCycle, maxAsync);
 
-        Counter cycleCounter = context.getMetrics().counter(name(activity.getClass().getSimpleName(), "cycles"));
+        Counter cycleCounter = MetricsContext.metrics().counter(name(activity.getClass().getSimpleName(), "cycles"));
         cycleCounter.inc(startCycle);
 
         if (interCycleDelay > 0) {

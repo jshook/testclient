@@ -25,14 +25,14 @@ import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
 
 public class Result {
-    private ExecutionContext context;
+    private OldExecutionContext context;
 
-    public Result(ExecutionContext context) {
+    public Result(OldExecutionContext context) {
         this.context = context;
     }
 
     public void reportTo(PrintStream out) {
-        ConsoleReporter consoleReporter = ConsoleReporter.forRegistry(context.getMetrics())
+        ConsoleReporter consoleReporter = ConsoleReporter.forRegistry(MetricsContext.metrics())
                 .convertDurationsTo(TimeUnit.MILLISECONDS)
                 .convertRatesTo(TimeUnit.SECONDS)
                 .filter(MetricFilter.ALL)

@@ -20,7 +20,8 @@ package com.metawiring.load.core;
 
 import com.codahale.metrics.Counter;
 import com.metawiring.load.activities.ActivityContextAware;
-import com.metawiring.load.activities.cql.ActivityContext;
+import com.metawiring.load.activities.CanCreateSchema;
+import com.metawiring.load.activities.oldcql.ActivityContext;
 import com.metawiring.load.activity.*;
 import com.metawiring.load.activity.ActivityDispenserFactory;
 import com.metawiring.load.activity.ActivityDispenserLocators;
@@ -47,16 +48,16 @@ import static com.codahale.metrics.MetricRegistry.name;
 /**
  * This class should be responsible for running a single activity to completion.
  */
-public class ActivityExecutorService {
+public class OldActivityExecutorService {
 
-    private ExecutionContext context;
-    private static Logger logger = LoggerFactory.getLogger(ActivityExecutorService.class);
+    private OldExecutionContext context;
+    private static Logger logger = LoggerFactory.getLogger(OldActivityExecutorService.class);
     private ActivityDispenserFactory activityDispenserFactory = new ActivityDispenserLocators();
 
-    public void prepare(ExecutionContext context) {
+    public void prepare(OldExecutionContext context) {
         this.context = context;
 
-        Counter activityCounter = context.getMetrics().counter(name(ActivityExecutorService.class.getSimpleName(), "activities"));
+        Counter activityCounter = MetricsContext.metrics().counter(name(OldActivityExecutorService.class.getSimpleName(), "activities"));
         context.startup();
     }
 
@@ -88,7 +89,9 @@ public class ActivityExecutorService {
             if (context.getConfig().createSchema) {
 //                initialActivity.init(def.getAlias(), context, activityScopedGeneratorSource);
                 initialActivity.prepare(0, 1, 0);
-                initialActivity.createSchema();
+                if (initialActivity instanceof CanCreateSchema) {
+                    ((CanCreateSchema) initialActivity).createSchema();
+                }
                 initialActivity.cleanup();
                 continue;
             }
