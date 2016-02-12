@@ -45,24 +45,24 @@ public class DirectImplADL implements ActivityDispenserLocator {
     public Optional<? extends ActivityDispenser> resolve(ActivityDef activityDef) {
 
         List<String> searchPaths = new ArrayList<>();
-        if (activityDef.getName().contains(".")) {
-            searchPaths.add(activityDef.getName());
+        if (activityDef.getAlias().contains(".")) {
+            searchPaths.add(activityDef.getAlias());
         } else {
             for (String activitySearchPackage : activitySearchPackages) {
-                searchPaths.add(activitySearchPackage + "." + activityDef.getName());
-                searchPaths.add(activitySearchPackage + "." + activityDef.getName() + "Activity");
+                searchPaths.add(activitySearchPackage + "." + activityDef.getAlias());
+                searchPaths.add(activitySearchPackage + "." + activityDef.getAlias() + "Activity");
             }
         }
 
         for (String searchPath : searchPaths) {
             try {
-                Class<? extends Activity> activityClass = (Class<? extends Activity>) Class.forName(searchPath);
+                Class<? extends Activity> activityClass = (Class<? extends Activity>) Class.forName(activityDef.getAlias());
                 if (activityClass != null) {
-                    DirectImplActivityDispenser directImplActivityDispenser = new DirectImplActivityDispenser(activityDef.getName(), activityClass);
+                    DirectImplActivityDispenser directImplActivityDispenser = new DirectImplActivityDispenser(activityDef.getAlias(), activityClass);
                     return Optional.of(directImplActivityDispenser);
                 }
             } catch (ClassNotFoundException e) {
-                logger.error("Could not find class: " + activityDef.getName());
+                logger.error("Could not find class: " + activityDef.getAlias());
             }
 
         }

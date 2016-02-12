@@ -18,65 +18,160 @@
 
 package com.metawiring.load.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
- * A definition for an activity.
+ * <p>A runtime definition for an activity.</p>
+ *
+ * <p>Instances of ActivityDef hold control values for the execution of a single activity.
+ * Each thread of the related activity is initialized with the associated ActivityDef.
+ * When the ActivityDef is modified, interested activity threads are notified so that
+ * they can dynamically adjust.</p>
+ *
+ * <p>The canonical values for all parameters are kept internally in the parameter map.</p>
  */
 public class ActivityDef {
-    private final String name;
 
-    private final long startCycle,endCycle;
-    private final int threads;
-    private int maxAsync = 1000;
-    private int interCycleDelay;
+    private final static Logger logger = LoggerFactory.getLogger(ActivityDef.class);
 
-    public ActivityDef(String name, long startCycle, long endCycle, int threads, int maxAsync, int interCycleDelay) {
-        this.name = name;
-        this.threads = threads;
-        this.maxAsync = maxAsync;
-        this.startCycle = startCycle;
-        this.endCycle = endCycle;
-        this.interCycleDelay = interCycleDelay;
+    // an alias with which to control the activity while it is running
+    private static final String FIELD_ALIAS = "alias";
+
+    // a file or URL containing the activity: statements, generator bindings, ...
+    private static final String FIELD_SOURCE = "source";
+
+    // cycles for this activity in either "M" or "N..M" form. "M" form implies "1..M"
+    private static final String FIELD_CYCLES = "cycles";
+
+    // initial thread concurrency for this activity
+    private static final String FIELD_THREADS = "threads";
+
+    // number of ops to keep in-flight
+    private static final String FIELD_ASYNC = "async";
+
+    // milliseconds between cycles per thread, for slow tests only
+    private static final String FIELD_DELAY = "delay";
+
+    private static final String DEFAULT_ALIAS = "unknown-alias";
+    private static final String DEFAULT_SOURCE = "unknown-source";
+    private static final String DEFAULT_CYCLES = "1..1";
+    private static final int DEFAULT_THREADS = 1;
+    private static final int DEFAULT_ASYNC = 1;
+    private static final int DEFAULT_DELAY = 0;
+
+
+    // parameter map has its own internal atomic map
+    private ParameterMap parameterMap;
+
+    private static String[] field_list = new String[] {
+            FIELD_ALIAS, FIELD_SOURCE, FIELD_CYCLES, FIELD_THREADS, FIELD_ASYNC, FIELD_DELAY
+    };
+
+    public ActivityDef(String parameterString) {
+        this.parameterMap = ParameterMap.parsePositional(parameterString, field_list);
+    }
+    protected ActivityDef(ParameterMap parameterMap) {
+        this.parameterMap = parameterMap;
     }
 
-    public String toString() {
-        if (startCycle==1) {
-            return name + ":" + endCycle + ":" + threads + ":" + maxAsync;
-        } else {
-            return name + ":" + startCycle + "-" + endCycle + ":" + threads + ":" + maxAsync;
+    public static Optional<ActivityDef> parseActivityDefOptionally(String namedActivitySpec) {
+        try {
+            ActivityDef activityDef = parseActivityDef(namedActivitySpec);
+            return Optional.of(activityDef);
+        } catch (Exception e) {
+            return Optional.empty();
         }
     }
 
-    public String getName() {
-        return name;
+    public static ActivityDef parseActivityDef(String namedActivitySpec) {
+        ParameterMap activityParameterMap = ParameterMap.parsePositional(namedActivitySpec,field_list);
+        ActivityDef activityDef = new ActivityDef(activityParameterMap);
+        return activityDef;
+    }
+
+    public String toString() {
+        return parameterMap.toString();
+    }
+
+    public String getAlias() {
+        return parameterMap.getStringOrDefault("alias",DEFAULT_ALIAS);
     }
 
     public long getStartCycle() {
-        return startCycle;
+        String cycles = parameterMap.getStringOrDefault("cycles",DEFAULT_CYCLES);
+        int rangeAt = cycles.indexOf("..");
+        if (rangeAt > 0) {
+            return Long.valueOf(cycles.substring(0,rangeAt));
+
+        } else {
+            return 1L;
+        }
     }
 
     public long getEndCycle() {
-        return endCycle;
+        String cycles = parameterMap.getStringOrDefault("cycles",DEFAULT_CYCLES);
+        int rangeAt = cycles.indexOf("..");
+        if (rangeAt > 0) {
+            return Long.valueOf(cycles.substring(rangeAt+2));
+        } else {
+            return Long.valueOf(cycles);
+        }
     }
 
     /**
      * Returns the greater of threads or maxAsync. The reason for this is that maxAsync less than threads will starve
      * threads of async grants, since the async is apportioned to threads in an activity.
+     *
      * @return maxAsync, or threads if threads is greater
      */
     public int getMaxAsync() {
-        if (maxAsync < threads) return threads;
-        else return maxAsync;
+        int async = parameterMap.getIntOrDefault(FIELD_ASYNC,DEFAULT_ASYNC);
+        int threads = parameterMap.getIntOrDefault(FIELD_THREADS,DEFAULT_THREADS);
+        return (threads > async) ? threads : async;
     }
 
     public int getThreads() {
-        return threads;
-    }
-
-    public long getTotalCycles() {
-        return endCycle-startCycle;
+        return parameterMap.getIntOrDefault(FIELD_THREADS,DEFAULT_THREADS);
     }
 
     public int getInterCycleDelay() {
-        return interCycleDelay;
+        return parameterMap.getIntOrDefault(FIELD_DELAY,DEFAULT_DELAY);
     }
+
+    public ParameterMap getParams() {
+        return parameterMap;
+    }
+
+    public String getSource() {
+        return parameterMap.getStringOrDefault("source",DEFAULT_SOURCE);
+    }
+
+    public AtomicLong getChangeCounter() {
+        return parameterMap.getChangeCounter();
+    }
+
+    public void setCycles(String cycles) {
+        parameterMap.set(FIELD_CYCLES,cycles);
+    }
+    public void setStartCycle(long startCycle) {
+        parameterMap.set("cycles","" + startCycle + ".." + getEndCycle());
+    }
+    protected void setEndCycle(long endCycle) {
+        parameterMap.set(FIELD_CYCLES,"" + getStartCycle() + ".." + endCycle);
+    }
+    protected void setThreads(int threads) {
+        parameterMap.set(FIELD_THREADS,threads);
+    }
+    protected void setAsync(int async) {
+        parameterMap.set(FIELD_ASYNC,async);
+    }
+    protected void updateDelay(int delay) {
+        parameterMap.set(FIELD_DELAY,delay);
+    }
+
+
 }

@@ -20,7 +20,6 @@ package com.metawiring.load.core;
 
 import com.codahale.metrics.Counter;
 import com.metawiring.load.activities.ActivityContextAware;
-import com.metawiring.load.activities.RuntimeContext;
 import com.metawiring.load.activities.cql.ActivityContext;
 import com.metawiring.load.activity.*;
 import com.metawiring.load.activity.ActivityDispenserFactory;
@@ -64,29 +63,41 @@ public class ActivityExecutorService {
     @SuppressWarnings("unchecked")
     public void execute() {
 
-        ScopedCachingGeneratorSource executionScopedGeneratorCache = new ScopedGeneratorCache(new GeneratorInstantiator(),RuntimeScope.testexecution);
+        ScopedCachingGeneratorSource executionScopedGeneratorCache =
+                new ScopedGeneratorCache(new GeneratorInstantiator(), RuntimeScope.testexecution);
 
         List<ExecutorService> executorServices = new ArrayList<>();
 
         for (ActivityDef def : context.getConfig().activities) {
             logger.info("Resolving activity dispenser for " + def);
 
-            ScopedCachingGeneratorSource activityScopedGeneratorSource = executionScopedGeneratorCache.EnterSubScope(RuntimeScope.activity);
+            ScopedCachingGeneratorSource activityScopedGeneratorSource =
+                    executionScopedGeneratorCache.EnterSubScope(RuntimeScope.activity);
 
             ActivityDispenser activityDispenser = activityDispenserFactory.get(def);
 
             Activity initialActivity = activityDispenser.getNewInstance();
+
             Object contextToShare = null;
             if (initialActivity instanceof ActivityContextAware<?>) {
                 contextToShare = ((ActivityContextAware) initialActivity).createContextToShare(def,activityScopedGeneratorSource,context);
                 ((ActivityContextAware) initialActivity).loadSharedContext(contextToShare); // in case we need to use this for createSchema
             }
 
+            // TODO: This is an ugly hack too. Remove it ASAP.
+            if (context.getConfig().createSchema) {
+//                initialActivity.init(def.getAlias(), context, activityScopedGeneratorSource);
+                initialActivity.prepare(0, 1, 0);
+                initialActivity.createSchema();
+                initialActivity.cleanup();
+                continue;
+            }
+
             ThreadFactory tf = new IndexedThreadFactory(def.toString());
             ExecutorService executorService = Executors.newFixedThreadPool(context.getConfig().createSchema ? 1 : def.getThreads(), tf);
             executorServices.add(executorService);
 
-            logger.info("creating shared context for activity " + def.getName());
+            logger.info("creating shared context for activity " + def.getAlias());
             Activity sharedContextCreator = activityDispenser.getNewInstance();
 
             logger.info("started thread pool " + executorService.toString());

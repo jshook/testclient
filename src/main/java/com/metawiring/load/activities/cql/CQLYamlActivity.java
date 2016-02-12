@@ -179,7 +179,7 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlAc
 
     protected void instrumentException(Exception e) {
         String exceptionType = e.getClass().getSimpleName();
-        activityContext.executionContext.getMetrics().meter(name(activityContext.getActivityDef().getName(), "exceptions", exceptionType)).mark();
+        activityContext.executionContext.getMetrics().meter(name(activityContext.getActivityDef().getAlias(), "exceptions", exceptionType)).mark();
         if (activityContext.executionContext.getConfig().diagnoseExceptions) {
             throw new RuntimeException(e);
         }

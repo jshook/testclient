@@ -45,8 +45,8 @@ public class YAMLResourceADL implements ActivityDispenserLocator {
 
         for (String searchPath : searchPaths) {
             String[] pathVariants = new String[]{
-                    searchPath + File.separator + activityDef.getName(),
-                    searchPath + File.separator + activityDef.getName() + ".yaml"
+                    searchPath + File.separator + activityDef.getAlias(),
+                    searchPath + File.separator + activityDef.getAlias() + ".yaml"
             };
 
             for (String pathVariant : pathVariants) {
@@ -54,7 +54,7 @@ public class YAMLResourceADL implements ActivityDispenserLocator {
                 try {
                     InputStream stream = YAMLFileADL.class.getClassLoader().getResourceAsStream(pathVariant);
                     if (stream != null) {
-                        logger.info("Located " + activityDef.getName() + " in class path: " + pathVariant);
+                        logger.info("Located " + activityDef.getAlias() + " in class path: " + pathVariant);
                         return Optional.of(new YamlActivityDispenser(activityDef, pathVariant, stream));
                     }
                 } catch (Exception ignored) {

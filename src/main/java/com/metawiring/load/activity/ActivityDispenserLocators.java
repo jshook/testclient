@@ -63,7 +63,7 @@ public class ActivityDispenserLocators implements ActivityDispenserFactory {
             }
         }
 
-        throw new RuntimeException("Could not resolve activity dispenser for " + activityDef.getName());
+        throw new RuntimeException("Could not resolve activity dispenser for " + activityDef.getAlias());
 
     }
 

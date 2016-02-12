@@ -55,11 +55,11 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
 
     public CQLActivityContext(ActivityDef def, ScopedCachingGeneratorSource scopedCachingGeneratorSource, ExecutionContext executionContext) {
         super(def, scopedCachingGeneratorSource, executionContext);
-        timerOps = executionContext.getMetrics().timer(name(def.getName(), "ops-total"));
-        timerWaits = executionContext.getMetrics().timer(name(def.getName(), "ops-wait"));
-        activityAsyncPendingCounter = executionContext.getMetrics().counter(name(def.getName(), "async-pending"));
-        triesHistogram = executionContext.getMetrics().histogram(name(def.getName(), "tries-histogram"));
-        executionContext.getMetrics().meter(name(def.getName(), "exceptions", "PlaceHolderException"));
+        timerOps = executionContext.getMetrics().timer(name(def.getAlias(), "ops-total"));
+        timerWaits = executionContext.getMetrics().timer(name(def.getAlias(), "ops-wait"));
+        activityAsyncPendingCounter = executionContext.getMetrics().counter(name(def.getAlias(), "async-pending"));
+        triesHistogram = executionContext.getMetrics().histogram(name(def.getAlias(), "tries-histogram"));
+        executionContext.getMetrics().meter(name(def.getAlias(), "exceptions", "PlaceHolderException"));
         session = executionContext.getSession();
         this.executionContext = executionContext;
     }

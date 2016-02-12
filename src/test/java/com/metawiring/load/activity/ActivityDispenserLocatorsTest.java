@@ -28,7 +28,7 @@ public class ActivityDispenserLocatorsTest {
     @Test
     public void testGetResolvesYamlSource() throws Exception {
         ActivityDispenserLocators dasr = new ActivityDispenserLocators();
-        ActivityDef ad = new ActivityDef("write-telemetry",0,1,1,1,0);
+        ActivityDef ad = new ActivityDef("write-telemetry:0:1:1:1:0");
         ActivityDispenser source = dasr.get(ad);
         assertNotNull(source);
     }

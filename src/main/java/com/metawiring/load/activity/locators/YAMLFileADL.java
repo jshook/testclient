@@ -40,8 +40,8 @@ public class YAMLFileADL implements ActivityDispenserLocator {
 
         for (String searchPath : searchPaths) {
             String[] pathVariants = new String[]{
-                    searchPath + File.separator + activityDef.getName(),
-                    searchPath + File.separator + activityDef.getName() + ".yaml"
+                    searchPath + File.separator + activityDef.getAlias(),
+                    searchPath + File.separator + activityDef.getAlias() + ".yaml"
             };
 
             for (String pathVariant : pathVariants) {

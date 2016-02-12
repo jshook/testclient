@@ -192,11 +192,13 @@ public class TestClientConfig {
                     throw new RuntimeException("Invalid cycles definitions: " + aCycles);
             }
             activityDefs.add(
-                    new ActivityDef(
-                            aName,
-                            Long.valueOf(aCyclesMin),Long.valueOf(aCyclesMax),
-                            Integer.valueOf(aThreads),Integer.valueOf(aMaxSync),
-                            Integer.valueOf(aInterCycleDelay)
+                    ActivityDef.parseActivityDef(
+                            "name="+aName+";"
+                            + "mincycle=" + aCyclesMin + ";"
+                            + "maxcycle=" + aCyclesMax + ";"
+                            + "threads=" + aThreads + ";"
+                            + "async=" + aMaxSync + ";"
+                            + "delay=" + aInterCycleDelay + ";"
                     )
             );
 
