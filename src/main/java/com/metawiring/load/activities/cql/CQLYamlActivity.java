@@ -21,11 +21,13 @@ package com.metawiring.load.activities.cql;
 import com.codahale.metrics.Timer;
 import com.datastax.driver.core.ResultSet;
 import com.metawiring.load.activities.ActivityContextAware;
+import com.metawiring.load.activities.CanCreateSchema;
 import com.metawiring.load.activity.Activity;
 import com.metawiring.load.activity.TimedResultSetFuture;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.YamlActivityDef;
-import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.core.MetricsContext;
+import com.metawiring.load.core.OldExecutionContext;
 import com.metawiring.load.core.ReadyStatement;
 import com.metawiring.load.core.ReadyStatements;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
@@ -36,7 +38,7 @@ import java.util.LinkedList;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
-public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlActivityContext> {
+public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlActivityContext>, CanCreateSchema {
 
     private static Logger logger = LoggerFactory.getLogger(CQLYamlActivity.class);
 
@@ -67,7 +69,6 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlAc
         readyStatements = activityContext.getReadyStatementsTemplate().bindAllGenerators(startCycle);
     }
 
-    @Override
     public void createSchema() {
 
         activityContext.createSchema();
@@ -162,7 +163,7 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlAc
     }
 
     @Override
-    public CQLYamlActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+    public CQLYamlActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, OldExecutionContext executionContext) {
         CQLYamlActivityContext activityContext = new CQLYamlActivityContext(def, yamlActivityDef, genSource, executionContext);
         return activityContext;
     }
@@ -179,7 +180,7 @@ public class CQLYamlActivity implements Activity, ActivityContextAware<CQLYamlAc
 
     protected void instrumentException(Exception e) {
         String exceptionType = e.getClass().getSimpleName();
-        activityContext.executionContext.getMetrics().meter(name(activityContext.getActivityDef().getAlias(), "exceptions", exceptionType)).mark();
+        MetricsContext.metrics().meter(name(activityContext.getActivityDef().getAlias(), "exceptions", exceptionType)).mark();
         if (activityContext.executionContext.getConfig().diagnoseExceptions) {
             throw new RuntimeException(e);
         }

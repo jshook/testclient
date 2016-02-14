@@ -51,7 +51,7 @@ public class ReadyStatementsTemplate {
 
         readyStatementTemplates.addAll(
                 statementDefs.stream().map(
-                        statementDef -> new ReadyStatementTemplate(statementDef, generatorSource, testClientConfig)
+                        statementDef -> new ReadyStatementTemplate(statementDef, generatorSource, activityParameters)
                 ).collect(Collectors.toList()));
 
         return this;

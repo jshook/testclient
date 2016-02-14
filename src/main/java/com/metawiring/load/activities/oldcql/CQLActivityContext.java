@@ -70,7 +70,7 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
                 getActivityGeneratorSource(),
                 getActivityDef().getParams()
         );
-        readyStatementsTemplate.addStatements(yamlActivityDef, "dml");
+        readyStatementsTemplate.addStatementsFromYaml(yamlActivityDef, "dml");
         readyStatementsTemplate.prepareAll();
         return readyStatementsTemplate;
     }

@@ -26,9 +26,9 @@ import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.collect.ImmutableMap;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.StatementDef;
-import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.core.MetricsContext;
+import com.metawiring.load.core.OldExecutionContext;
 import com.metawiring.load.core.ReadyStatements;
-import com.metawiring.load.core.ReadyStatementsTemplate;
 import com.metawiring.load.generator.GeneratorBindingList;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class ReadTelemetryAsyncActivity extends BaseActivity implements Activity
     private ReadyStatements readyStatements;
 
     @Override
-    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, OldExecutionContext executionContext) {
         CQLActivityContext activityContext = new CQLActivityContext(def, genSource, executionContext);
         List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
             {
@@ -89,7 +89,7 @@ public class ReadTelemetryAsyncActivity extends BaseActivity implements Activity
     @Override
     public void loadSharedContext(CQLActivityContext cqlSharedContext) {
         this.cqlSharedContext = cqlSharedContext;
-        context = cqlSharedContext.getExecutionContext();
+        context = cqlSharedContext.executionContext;
     }
 
     @Override
@@ -126,27 +126,19 @@ public class ReadTelemetryAsyncActivity extends BaseActivity implements Activity
         this.endCycle = endCycle;
         submittedCycle = startCycle - 1l;
 
-        if (cqlSharedContext.executionContext.getConfig().createSchema) {
-            createSchema();
-        }
+        timerOps = MetricsContext.metrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
+        timerWaits = MetricsContext.metrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
 
-        timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
-        timerWaits = cqlSharedContext.getExecutionContext().getMetrics().timer(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
+        activityAsyncPendingCounter = MetricsContext.metrics().counter(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
 
-        activityAsyncPendingCounter = cqlSharedContext.getExecutionContext().getMetrics().counter(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
-
-        triesHistogram = cqlSharedContext.getExecutionContext().getMetrics().histogram(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
+        triesHistogram = MetricsContext.metrics().histogram(name(ReadTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
 
         // To populate the namespace
-        cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
+        MetricsContext.metrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
 
      readyStatements = cqlSharedContext.readyStatementsTemplate.bindAllGenerators(startCycle);
 
 
-    }
-
-    @Override
-    public void createSchema() {
     }
 
 

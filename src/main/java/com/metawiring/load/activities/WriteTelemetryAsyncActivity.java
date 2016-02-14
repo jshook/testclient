@@ -25,17 +25,15 @@ import com.datastax.driver.core.*;
 import com.google.common.collect.ImmutableMap;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.StatementDef;
-import com.metawiring.load.core.ExecutionContext;
-import com.metawiring.load.core.ReadyStatements;
-import com.metawiring.load.core.ReadyStatementsTemplate;
 import com.metawiring.load.core.MetricsContext;
+import com.metawiring.load.core.OldExecutionContext;
+import com.metawiring.load.core.ReadyStatements;
 import com.metawiring.load.generator.GeneratorBindingList;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -46,9 +44,8 @@ import static com.codahale.metrics.MetricRegistry.name;
  * This should be written in more of a pipeline way, with consumer and producer pools, but not now.
  */
 @SuppressWarnings("ALL")
-public class WriteTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext> {
-public class WriteTelemetryAsyncActivity extends BaseActivity implements CanCreateSchema {
-
+public class WriteTelemetryAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext>, CanCreateSchema {
+ // implements CanCreateSchema
     private static Logger logger = LoggerFactory.getLogger(WriteTelemetryAsyncActivity.class);
 
     private long endCycle, submittedCycle;
@@ -58,9 +55,10 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements CanCrea
     private GeneratorBindingList generatorBindingList;
     private CQLActivityContext cqlSharedContext;
     private ReadyStatements readyStatements;
+    private OldExecutionContext context;
 
     @Override
-    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, OldExecutionContext executionContext) {
         CQLActivityContext activityContext = new CQLActivityContext(def, genSource, executionContext);
 
         List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
@@ -135,15 +133,15 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements CanCrea
             return;
         }
 
-        timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
-        timerWaits = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
+        timerOps = MetricsContext.metrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-total"));
+        timerWaits = MetricsContext.metrics().timer(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "ops-wait"));
 
-        activityAsyncPendingCounter = cqlSharedContext.getExecutionContext().getMetrics().counter(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
+        activityAsyncPendingCounter = MetricsContext.metrics().counter(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "async-pending"));
 
-        triesHistogram = cqlSharedContext.getExecutionContext().getMetrics().histogram(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
+        triesHistogram = MetricsContext.metrics().histogram(name(WriteTelemetryAsyncActivity.class.getSimpleName(), "tries-histogram"));
 
         // To populate the namespace
-        cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
+        MetricsContext.metrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
 
 
 //        ReadyStatementsTemplate readyStatementsTemplate = cqlSharedContext.initReadyStatementsTemplate(statementDefs);
@@ -177,7 +175,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements CanCrea
         StatementDef tableStmt = new StatementDef("create-table", tableDDL, ImmutableMap.<String, String>builder().build());
 
         try {
-            cqlSharedContext.session.execute(keyspaceStmt.getCookedStatement(cqlSharedContext.getExecutionContext().getConfig()));
+            cqlSharedContext.session.execute(keyspaceStmt.getCookedStatement(cqlSharedContext.getActivityDef().getParams()));
             logger.info("Created keyspace " + cqlSharedContext.getExecutionContext().getConfig().keyspace);
         } catch (Exception e) {
             logger.error("Error while creating keyspace " + cqlSharedContext.getExecutionContext().getConfig().keyspace, e);
@@ -185,7 +183,7 @@ public class WriteTelemetryAsyncActivity extends BaseActivity implements CanCrea
         }
 
         try {
-            cqlSharedContext.session.execute(tableStmt.getCookedStatement(cqlSharedContext.getExecutionContext().getConfig()));
+            cqlSharedContext.session.execute(tableStmt.getCookedStatement(cqlSharedContext.getActivityDef().getParams()));
             logger.info("Created table " + cqlSharedContext.getExecutionContext().getConfig().table);
         } catch (Exception e) {
             logger.error("Error while creating table " + cqlSharedContext.getExecutionContext().getConfig().table, e);

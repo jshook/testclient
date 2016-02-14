@@ -39,9 +39,11 @@ import java.util.Optional;
 public class YAMLDefLoader<T> {
     private final static Logger logger = LoggerFactory.getLogger(YAMLDefLoader.class);
     private String[] searchPaths = new String[0];
+    Class<T> classToLoad;
 
-    public YAMLDefLoader(String... searchPaths) {
+    public YAMLDefLoader(Class<T> clazz, String... searchPaths) {
         this.searchPaths = searchPaths;
+        classToLoad = clazz;
     }
 
     public Optional<T> load(String resourceName) {
@@ -63,8 +65,8 @@ public class YAMLDefLoader<T> {
                     throw new RuntimeException("error loading " + resourceName, e);
                 }
             }
-
         }
+        return Optional.empty();
     }
 
     private T loadYaml(String fromPath, InputStream stream) {
@@ -80,7 +82,7 @@ public class YAMLDefLoader<T> {
 
         // TODO: Encode the class type in the loader calling signature
         try {
-            return yaml.loadAs(stream, T);
+            return yaml.loadAs(stream, classToLoad);
         } catch (Exception e) {
             logger.error("Error loading yaml from " + fromPath, e);
             throw e;

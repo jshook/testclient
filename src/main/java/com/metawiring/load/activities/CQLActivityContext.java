@@ -23,14 +23,11 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Timer;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Session;
-import com.metawiring.load.activities.cql.ActivityContext;
-import com.metawiring.load.activities.cql.BaseActivityContext;
+import com.metawiring.load.activities.oldcql.ActivityContext;
+import com.metawiring.load.activities.oldcql.BaseActivityContext;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.StatementDef;
-import com.metawiring.load.core.ExecutionContext;
-import com.metawiring.load.core.ReadyStatement;
-import com.metawiring.load.core.ReadyStatements;
-import com.metawiring.load.core.ReadyStatementsTemplate;
+import com.metawiring.load.core.*;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,15 +48,15 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
     Histogram triesHistogram;
     ReadyStatementsTemplate readyStatementsTemplate;
     Session session;
-    ExecutionContext executionContext;
+    OldExecutionContext executionContext;
 
-    public CQLActivityContext(ActivityDef def, ScopedCachingGeneratorSource scopedCachingGeneratorSource, ExecutionContext executionContext) {
-        super(def, scopedCachingGeneratorSource, executionContext);
-        timerOps = executionContext.getMetrics().timer(name(def.getAlias(), "ops-total"));
-        timerWaits = executionContext.getMetrics().timer(name(def.getAlias(), "ops-wait"));
-        activityAsyncPendingCounter = executionContext.getMetrics().counter(name(def.getAlias(), "async-pending"));
-        triesHistogram = executionContext.getMetrics().histogram(name(def.getAlias(), "tries-histogram"));
-        executionContext.getMetrics().meter(name(def.getAlias(), "exceptions", "PlaceHolderException"));
+    public CQLActivityContext(ActivityDef def, ScopedCachingGeneratorSource scopedCachingGeneratorSource, OldExecutionContext executionContext) {
+        super(def, scopedCachingGeneratorSource);
+        timerOps = MetricsContext.metrics().timer(name(def.getAlias(), "ops-total"));
+        timerWaits = MetricsContext.metrics().timer(name(def.getAlias(), "ops-wait"));
+        activityAsyncPendingCounter = MetricsContext.metrics().counter(name(def.getAlias(), "async-pending"));
+        triesHistogram = MetricsContext.metrics().histogram(name(def.getAlias(), "tries-histogram"));
+        MetricsContext.metrics().meter(name(def.getAlias(), "exceptions", "PlaceHolderException"));
         session = executionContext.getSession();
         this.executionContext = executionContext;
     }
@@ -69,7 +66,7 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
         readyStatementsTemplate = new ReadyStatementsTemplate(
                 executionContext.getSession(),
                 getActivityGeneratorSource(),
-                executionContext.getConfig()
+                getActivityDef().getParams()
         );
 
         readyStatementsTemplate.addStatementDefs(statementDefs);
@@ -91,7 +88,7 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
         ReadyStatementsTemplate readyStatementsTemplate = new ReadyStatementsTemplate(
                 executionContext.getSession(),
                 getActivityGeneratorSource(),
-                executionContext.getConfig()
+                getActivityDef().getParams()
         );
         readyStatementsTemplate.addStatementDefs(statementDefs);
         readyStatementsTemplate.prepareAll();
@@ -102,5 +99,9 @@ public class CQLActivityContext extends BaseActivityContext implements ActivityC
         }
 
 
+    }
+
+    public OldExecutionContext getExecutionContext() {
+        return executionContext;
     }
 }

@@ -18,7 +18,7 @@
 
 package com.metawiring.load.activity.dispensers;
 
-import com.metawiring.load.activities.oldcql.CQLYamlActivity;
+import com.metawiring.load.activities.cql.CQLYamlActivity;
 import com.metawiring.load.activity.ActivityDispenser;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.YamlActivityDef;
