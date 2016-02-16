@@ -17,6 +17,7 @@ package com.metawiring.load.core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
@@ -28,21 +29,33 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-public class ScriptEnvironment implements Runnable {
+public class ScriptExecutor implements Runnable {
 
-    private static final Logger logger = LoggerFactory.getLogger(ScriptEnvironment.class);
+    private static final Logger logger = LoggerFactory.getLogger(ScriptExecutor.class);
 
     private final List<String> scripts = new ArrayList<>();
     private ScriptEngine engine;
+    private Optional<ScriptContext> scriptContext = Optional.empty();
 
     public static void main(String[] args) {
-        ScriptEnvironment env = new ScriptEnvironment();
+        ScriptExecutor env = new ScriptExecutor();
         env.addScriptFiles(args);
         env.run();
     }
 
-    private ScriptEnvironment addScriptFiles(String[] args) {
+    public ScriptExecutor addScriptContext(ScriptContext context) {
+        scriptContext = Optional.of(context);
+        return this;
+    }
+
+    public ScriptExecutor addScriptText(String scriptText) {
+        scripts.add(scriptText);
+        return this;
+    }
+
+    public ScriptExecutor addScriptFiles(String[] args) {
         for (String scriptFile : args) {
             Path scriptPath = Paths.get(scriptFile);
             byte[] bytes = new byte[0];
@@ -54,7 +67,7 @@ public class ScriptEnvironment implements Runnable {
             ByteBuffer bb = ByteBuffer.wrap(bytes);
             Charset utf8 = Charset.forName("UTF8");
             String scriptData = utf8.decode(bb).toString();
-            scripts.add(scriptData);
+            addScriptText(scriptData);
         }
         return this;
     }
@@ -63,9 +76,13 @@ public class ScriptEnvironment implements Runnable {
     public void run() {
         ScriptEngineManager sem = new ScriptEngineManager();
         ScriptEngine engine = sem.getEngineByName("nashorn");
+        scriptContext.ifPresent(engine::setContext);
+
         for (String script : scripts) {
             try {
-                engine.eval(script);
+                Object result = engine.eval(script);
+
+//                logger.debug("engine eval result:" + result);
             } catch (ScriptException e) {
                 e.printStackTrace();
             }

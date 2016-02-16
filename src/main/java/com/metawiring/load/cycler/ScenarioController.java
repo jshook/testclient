@@ -28,6 +28,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * A ScenarioController provides a way to start Activities, modify them while running, and stop, pause or restart them.
+ */
 public class ScenarioController {
 
     private static final Logger logger = LoggerFactory.getLogger(ScenarioController.class);
