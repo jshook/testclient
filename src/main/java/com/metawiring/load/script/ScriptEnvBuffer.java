@@ -12,7 +12,9 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-package com.metawiring.load.core;
+package com.metawiring.load.script;
+
+import com.metawiring.load.cycler.ScenarioController;
 
 import javax.script.SimpleScriptContext;
 import java.io.*;

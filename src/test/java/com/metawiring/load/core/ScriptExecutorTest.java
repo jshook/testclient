@@ -1,5 +1,7 @@
 package com.metawiring.load.core;
 
+import com.metawiring.load.script.ScriptEnvBuffer;
+import com.metawiring.load.script.ScriptExecutor;
 import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +30,11 @@ public class ScriptExecutorTest {
         env.addScriptText("print('loaded script environment...');\n");
         env.run();
         assertThat(buffer.getStdoutText()).startsWith("loaded script environment...");
+    }
+
+    @Test
+    public void shouldUseEnvAdapter() {
+
     }
 
 }

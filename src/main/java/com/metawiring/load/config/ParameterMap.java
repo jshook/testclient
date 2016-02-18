@@ -14,6 +14,10 @@
 */
 package com.metawiring.load.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.script.Bindings;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -31,80 +35,90 @@ import java.util.stream.Collectors;
  * <p/>
  * <p>No native types are used internally. Everything is encoded as a String.</p>
  */
-public class ParameterMap {
+public class ParameterMap extends ConcurrentHashMap<String,Object> implements Bindings {
+    private final static Logger logger = LoggerFactory.getLogger(ParameterMap.class);
 
-    private final ConcurrentHashMap<String, String> paramMap = new ConcurrentHashMap<>(10);
+
+//    private final ConcurrentHashMap<String, String> paramMap = new ConcurrentHashMap<>(10);
     private final AtomicLong changeCounter = new AtomicLong(0L);
     private final LinkedList<Listener> listeners = new LinkedList<>();
 
     private ParameterMap(Map<String, String> valueMap) {
-        paramMap.putAll(valueMap);
+        logger.info("new parameter map:" + valueMap.toString());
+        super.putAll(valueMap);
     }
 
     public long getLongOrDefault(String paramName, long defaultLongValue) {
-        Optional<String> l = Optional.ofNullable(paramMap.get(paramName));
+        Optional<String> l = Optional.ofNullable(super.get(paramName)).map(String::valueOf);
         return l.map(Long::valueOf).orElse(defaultLongValue);
     }
 
     public double getDoubleOrDefault(String paramName, double defaultDoubleValue) {
-        Optional<String> d = Optional.ofNullable(paramMap.get(paramName));
+        Optional<String> d = Optional.ofNullable(super.get(paramName)).map(String::valueOf);
         return d.map(Double::valueOf).orElse(defaultDoubleValue);
     }
 
     public String getStringOrDefault(String paramName, String defaultStringValue) {
-        Optional<String> s = Optional.ofNullable(paramMap.get(paramName));
+        Optional<String> s = Optional.ofNullable(super.get(paramName)).map(String::valueOf);
         return s.orElse(defaultStringValue);
     }
 
     public int getIntOrDefault(String paramName, int defaultIntValue) {
-        Optional<String> i = Optional.ofNullable(paramMap.get(paramName));
+        Optional<String> i = Optional.ofNullable(super.get(paramName)).map(String::valueOf);
         return i.map(Integer::valueOf).orElse(defaultIntValue);
     }
 
     public boolean getBoolOrDefault(String paramName, boolean defaultBoolValue) {
-        Optional<String> b = Optional.ofNullable(paramMap.get(paramName));
+        Optional<String> b = Optional.ofNullable(super.get(paramName)).map(String::valueOf);
         return b.map(Boolean::valueOf).orElse(defaultBoolValue);
     }
 
 
     public Long takeLongOrDefault(String paramName, Long defaultLongValue) {
-        Optional<String> l = Optional.ofNullable(paramMap.remove(paramName));
+        Optional<String> l = Optional.ofNullable(super.remove(paramName)).map(String::valueOf);
         Long lval = l.map(Long::valueOf).orElse(defaultLongValue);
         markMutation();
         return lval;
     }
 
     public Double takeDoubleOrDefault(String paramName, double defaultDoubleValue) {
-        Optional<String> d = Optional.ofNullable(paramMap.remove(paramName));
+        Optional<String> d = Optional.ofNullable(super.remove(paramName)).map(String::valueOf);
         Double dval = d.map(Double::valueOf).orElse(defaultDoubleValue);
         markMutation();
         return dval;
     }
 
     public String takeStringOrDefault(String paramName, String defaultStringValue) {
-        Optional<String> s = Optional.ofNullable(paramMap.remove(paramName));
+        Optional<String> s = Optional.ofNullable(super.remove(paramName)).map(String::valueOf);
         String sval = s.orElse(defaultStringValue);
         markMutation();
         return sval;
     }
 
     public int takeIntOrDefault(String paramName, int paramDefault) {
-        Optional<String> i = Optional.ofNullable(paramMap.remove(paramName));
+        Optional<String> i = Optional.ofNullable(super.remove(paramName)).map(String::valueOf);
         int ival = i.map(Integer::valueOf).orElse(paramDefault);
         markMutation();
         return ival;
     }
 
     public boolean takeBoolOrDefault(String paramName, boolean defaultBoolValue) {
-        Optional<String> b = Optional.ofNullable(paramMap.remove(paramName));
+        Optional<String> b = Optional.ofNullable(super.remove(paramName)).map(String::valueOf);
         boolean bval = b.map(Boolean::valueOf).orElse(defaultBoolValue);
         markMutation();
         return bval;
     }
 
 
+    @Override
+    public Object get(Object key) {
+        logger.info("getting parameter " + key);
+        return super.get(key);
+    }
+
     public void set(String paramName, Object newValue) {
-        paramMap.put(paramName, String.valueOf(newValue));
+        super.put(paramName, String.valueOf(newValue));
+        logger.info("parameter " + paramName + " set to " + newValue);
         markMutation();
     }
 
@@ -191,13 +205,49 @@ public class ParameterMap {
         return parameterMap;
     }
 
-    public int size() {
-        return paramMap.size();
+    @Override
+    public Object put(String name, Object value) {
+        Object oldVal = super.put(name, String.valueOf(value));
+        logger.info("parameter " + name + " put to " + value);
+
+        markMutation();
+        return oldVal;
     }
 
-    public int getSize() {
-        return this.paramMap.size();
+    @Override
+    public void putAll(Map<? extends String, ? extends Object> toMerge) {
+        for (Entry<? extends String, ? extends Object> entry : toMerge.entrySet()) {
+            super.put(entry.getKey(),String.valueOf(entry.getValue()));
+        }
+        markMutation();
     }
+
+    @Override
+    public Object remove(Object key) {
+        Object removed = super.remove(key);
+        logger.info("parameter " + key + " removed");
+
+        markMutation();
+        return removed;
+    }
+
+    @Override
+    public void clear() {
+        logger.info("parameter map cleared:" + toString());
+        super.clear();
+
+        markMutation();
+    }
+
+    @Override
+    public Set<Entry<String, Object>> entrySet() {
+        logger.info("getting entry set for " + toString());
+        return super.entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<String,Object>(e.getKey(), e.getValue()) {})
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
 
     private void markMutation() {
         changeCounter.incrementAndGet();
@@ -215,7 +265,7 @@ public class ParameterMap {
     }
 
     public String toString() {
-        return paramMap.toString();
+        return "C:" + this.changeCounter.get() + ":" + super.toString();
     }
 
     public void addListener(Listener listener) {
@@ -228,8 +278,13 @@ public class ParameterMap {
 
     private void callListeners() {
         for (Listener listener : listeners) {
+            logger.info("calling listener:" + listener);
             listener.handleParameterMapUpdate(this);
         }
+    }
+
+    public int getSize() {
+        return super.size();
     }
 
     public static interface Listener {

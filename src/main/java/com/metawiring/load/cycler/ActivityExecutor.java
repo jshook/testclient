@@ -14,6 +14,7 @@
 */
 package com.metawiring.load.cycler;
 
+import com.google.common.base.Predicates;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.ParameterMap;
 import com.metawiring.load.core.IndexedThreadFactory;
@@ -104,6 +105,24 @@ public class ActivityExecutor implements ParameterMap.Listener {
                 .filter(m -> !m.hasStarted())
                 .forEach(executorService::execute);
 
+        activityMotors.stream()
+                .forEach(m -> awaitStartup(m,1000));
+        // TODO: await until all new are running
+
+
+    }
+
+    private void awaitStartup(ActivityMotor m, int i) {
+        long startedAt=System.currentTimeMillis();
+        while(!m.getMotorController().isStarted() && System.currentTimeMillis()< (startedAt+i) ) {
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException ignored) {
+            }
+        }
+        if (!m.getMotorController().isStarted()) {
+            throw new RuntimeException("thread startup delayed excessivly. Adjust timeout or investigate.");
+        }
     }
 
     public synchronized void forceStop() {
@@ -152,5 +171,9 @@ public class ActivityExecutor implements ParameterMap.Listener {
 
     public ActivityDef getActivityDef() {
         return activityDef;
+    }
+
+    public String toString() {
+        return getClass().getSimpleName() + "~" + activityDef.getAlias();
     }
 }

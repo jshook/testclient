@@ -39,6 +39,7 @@ public class DiagAction implements ActivityAction, ActivityDefObserver {
     private void updateReportTime() {
         lastUpdate = System.currentTimeMillis() - calculateOffset(slot, activityDef);
         quantizedInterval = calculateInterval(activityDef);
+        logger.debug("updating report time for slot:" + slot + ", def:" + activityDef + " to " + quantizedInterval);
     }
 
     @Override

@@ -14,6 +14,7 @@
 */
 package com.metawiring.load.cycler;
 
+import com.google.common.collect.ImmutableMap;
 import com.metawiring.load.activities.ActivityType;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.ParameterMap;
@@ -24,9 +25,8 @@ import com.metawiring.load.cycler.inputs.CycleSequenceSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A ScenarioController provides a way to start Activities, modify them while running, and stop, pause or restart them.
@@ -76,6 +76,7 @@ public class ScenarioController {
 
     }
 
+    // TODO: Move activity construction logic out of scenario controller
     private ActivityExecutor getActivityExecutor(ActivityDef activityDef) {
         synchronized (activityExecutors) {
             ActivityExecutor executor = activityExecutors.get(activityDef.getAlias());
@@ -125,5 +126,19 @@ public class ScenarioController {
             }
             remaining = 0;
         }
+    }
+
+    public Set<String> getAliases() {
+        return activityExecutors.keySet();
+    }
+
+    public List<ActivityDef> getActivityDefs() {
+        return activityExecutors.values().stream()
+                .map(ActivityExecutor::getActivityDef)
+                .collect(Collectors.toList());
+    }
+
+    public ActivityDef getActivityDef(String s) {
+        return getActivityExecutor(s).getActivityDef();
     }
 }

@@ -28,6 +28,10 @@ public class MotorController {
 
     public final AtomicReference<RunState> runState = new AtomicReference<>(RunState.Initialized);
 
+    public boolean isStarted() {
+        return runState.get()==RunState.Started;
+    }
+
     public static enum RunState {
         // Initial state after creation of this control
         Initialized,

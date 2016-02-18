@@ -12,8 +12,9 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-package com.metawiring.load.core;
+package com.metawiring.load.script;
 
+import com.metawiring.load.cycler.ScenarioController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,11 +77,19 @@ public class ScriptExecutor implements Runnable {
     public void run() {
         ScriptEngineManager sem = new ScriptEngineManager();
         ScriptEngine engine = sem.getEngineByName("nashorn");
+
+        ScenarioController scenario = new ScenarioController();
+        scriptContext = Optional.of(scriptContext.orElse(new ScriptEnv(scenario)));
         scriptContext.ifPresent(engine::setContext);
+        engine.put("sc",scenario);
+        engine.put("activities",new ScenarioBindings(scenario));
+        // TODO: rename sc -> scene or scenario everywhere
+//        scriptContext.get().setAttribute("sc",sc,ScriptContext.ENGINE_SCOPE); // TODO: Global SC scope?
 
         for (String script : scripts) {
             try {
-                Object result = engine.eval(script);
+                Object result = engine.eval("load('bin/sanitycheck.js');");
+//                Object result = engine.eval(script);
 
 //                logger.debug("engine eval result:" + result);
             } catch (ScriptException e) {
