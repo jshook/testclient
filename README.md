@@ -1,17 +1,27 @@
-## a Cassandra/CQL test client
+## A Testing Harness [name TBD]
 
-This was thrown together as a way to quickly get some specific tests running. It is a bit rough around the edges.
+This project aims to provide a missing power tool in the test tooling arsenal. It doesn't aim to solve all problems for all people. What it aspires to do, it aspires to do very well. Here are the goals:
 
-Even though the code is not perfect or even pretty in places, It was evident that it might be useful to some. Many users need a starting point for testing application-specific data models with some degree of performance. It is not  a comprehensive testing tool, nor even a feature rich one like the new Cassandra stress tool. It's just a client that can allow users to test application-specific CQL workloads at speed. Sometimes, that's exactly what you need. So it is in that spirit that I share this thing that was supposed to be a quick-n-dirty testing rig.
+1. Provide a useful and intuitive machine pattern for building and reasoning about performance tests.
+2. Minimize the amount of effort required to configure and run a test.
+3. Enable direct construction of tests which are based on specific data models, access patterns, and data distributions.
+4. Reduce testing time of many permutations by allowing tests to contain active logic.
 
-I will do light maintanaince on it and consider any requests that are submitted. However, this project is not my main focus. Some day, I'd like to release a proper scale testing tool, but this is not that tool. It's just a sapling. Please submit requests via the project page if you need bugs fixed or even small enhancements.
+As mentioned above, this is primarily about performance testing. That said, support for other types of testing may be added in the future.
 
-### Requirements
+## Scale
 
-To just use the client as it is, simply download the jar and run it with JVM version 7 or newer.
-This test client is released as an executable jar. See the project releases to download the jar directly.
+For now, this is a single-instance client. For testing large clusters, you will still need to run multiple clients to provide adequate loading. Experience has shown that one client can adequately drive 3-5 target systems for typical workloads. As always, be sure to watch your metrics on both sides to ensure that your testing instrument isn't the thing being measured.
 
-If you intend to use this source code as a starting point for running a dedicated test, then you might need to install maven first.
+## Getting Started
+
+You can begin at [Quick Start](quickstart.md) or consult the full [Users Guide](usersguide.md).
+
+
+To just use the client as it is, simply download the jar and run it with JVM version 8 or newer. This test client is released as an executable jar. See the project releases to download the jar directly.
+
+If you intend to use this source code as a starting point for building an Activity Type or a Data Provider, then you might need to install maven first.
+
 
 ### Command Line
 
@@ -199,110 +209,6 @@ The bindings map a field position to a generator function. They must be in order
 The &lt;&lt;word&gt;&gt; convention is used for parameter substitution. KEYSPACE, TABLE, and RF are all substituted automatically from the command line options. The _create table_ clause above shows a convention that uses both the configured TABLE name as well as a _tablename value. This is a useful way to have a common configurable prefix when you are using multiple tables.
 
 Both the __ddl__ and __dml__ sections contain exactly the same thing structurally. In fact, it's exactly the same configuration type internally. Both contain a list of named statements with their cql template and a set of associated bindings. You don't see any bindings under ddl because they are meaningless there for this example activity.
-
-
-## Metrics
-
-The instrumentation uses the dropwizard metrics library, formerly the yammer metrics library, formerly the coda hale metrics library.. It might be named something different next year, but it's still quite useful.
-
-By default, the metrics will be logged to console via the console log and logging metrics reporter. At the end of a run, the long form of the metrics summaries are dumped to console. The reporting interval for this method is every minute. Once you start the client, you'll see a periodic report to the screen showing the current testing time as a heartbeat that the test is running.
-
-### Configuration
-
-The only metrics configuration exposed at this time is the --graphite CLI option. You can pass &lt;host&gt; or &lt;host&gt;:&lt;port&gt; in order to capture and analyze your metrics on a compatible server.
-
-### Interpretation & Examples
-
-    22:27:20.544 [metrics-logger-reporter-thread-1] INFO  c.m.load.core.MetricReporters - type=COUNTER, name=ReadTelemetryAsyncActivity.async-pending, count=100
-
-This line shows the basic format of a log line. The important bits here start with __type=COUNTER__. The remainder of this section will consist of only that part and everything after it. As well, the lines will be wrapped and indented to provide easier reading, and numbers shortened.
-
-There will be a basic explanation of each type, followed by an explanation about the specific metric names.
-
-__counters__
-
-    type=COUNTER, name=ReadTelemetryAsyncActivity.async-pending, count=100
-
-This is a basic counter. It simply tells you the number that the app was reporting at the time the reporter triggered. Counters are not montonically increasing. They can go up and down. In this example, the count shows you how many _async-pending_s there were, or the number of async operations in flight for the ReadTelemetryAsync activity.
-
-__histograms__
-
-	type=HISTOGRAM, name=ReadTelemetryAsyncActivity.tries-histogram,
-     count=184148, min=1, max=1, mean=1.0, stddev=0.0, median=1.0,
-     p75=1.0, p95=1.0, p98=1.0, p99=1.0, p999=1.0
-
-	type=HISTOGRAM, name=ReadTelemetryAsyncActivity.ops-histogram,
-     count=184148, min=2327168, max=176278812,
-     mean=3.42E7,stddev=2.2264E7, median=2.938E7,
-     p75=4.41E7, p95=7.8723E7, p98=9.61628E7, p99=1.12606E8, p999=1.703E8
-
-This is a histogram of all the values submitted to it. It also contains basic stats of the values submitted, but no timing data apart from the value semantics of the samples themselves. In this case, the values are indicating the distribution of tries to complete the ReadTelemetryAsyncActivity. p999 is 1.0, so there is less than a 1/10000 chance that there was even a single retry.
-
-
-__meters__
-
-    type=METER, name=WriteTelemetryAsyncActivity.exceptions.PlaceHolderException,
-    count=0, mean_rate=0.0, m1=0.0, m5=0.0, m15=0.0,
-    rate_unit=events/second
-
-A meter is merely a way to capture the rate of a type of an event. This one is the infamous PlaceHolderException, which is how I make sure that I'm reporting exactly 0 of something important to ensure that the downstream monitoring system can see it (and that the admin is putting something on the dashboard.) It captures not only the count, but also the mean_rate since start (which can skew away from recent trends) and the 1, 5 and 15 minute moving average.
-
-__timers__
-
-    type=TIMER, name=ReadTelemetryAsyncActivity.ops-total,
-     count=184190, min=2.7, max=143.56, mean=34.48, stddev=22.24, median=29.52,
-     p75=44.68, p95=80.63, p98=97.15, p99=108.48, p999=143.46,
-     mean_rate=3081.74, m1=3489.71, m5=4171.31, m15=4312.,
-     rate_unit=events/second, duration_unit=milliseconds
-
-Timers are a combo of histograms and meters and counters. They include all the information we tend to want when when profiling something. In this case, millisecond measurements of the total time an operation took. Also, the moving average rates are included.The p999 duration is 143ms, not bad for my desktop system, and the median value (aka p50) is 34 microseconds. The average op rate for the duration of this test was 3081.
-
-The remainder of this section describes the chosen metrics in more detail.
-
-###### Cycle Position (counters)
-
-- ReadTelemetryAsyncActivity.cycles
-- WriteTelemetryAsyncActivity.cycles
-
-The cycle position of the named activity. This is a trace of the progress between the start cycle and the end cycle, as specified on the command line.
-
-###### Op rates & client latencies (timers)
-
-- ReadTelemetryAsyncActivity.ops-total
-- WriteTelemetryAsyncActivity.ops-total
-
-The timing of an operation, from the time it was submitted asynchronously to the time it completed, including all retries, or the time it took to fail after exceeding retries.
-
-###### Pending Async Ops (counters)
-
-- WriteTelemetryAsyncActivity.async-pending
-- WriteTelemetryAsyncActivity.async-pending
-
-The number of asyncronous operations pending for the named activity.
-
-###### Async Wait (timers)
-- ReadTelemetryAsyncActivity.ops-wait
-- WriteTelemetryAsyncActivity.ops-wait
-
-The wait time between starting the getUninterruptibly() call and when it returns.
-
-###### Tries, Retries (histograms)
-
-- ReadTelemetryAsyncActivity.tries-histogram
-- WriteTelemetryAsyncActivity.tries-histogram
-
-###### Exception Rates (meters)
-
-- WriteTelemetryAsyncActivity.exceptions.*
-- ReadTelemetryAsyncActivity.exceptions.*
-
-The rate of exceptions of the given name. There could be various names of this metric, so it's safer to monitor for everything under this name and then break them out individuall if you need.
-
-###### Activity Count (counters)
-
-- ActivityExecutorService.activities
-
-The number of configured activities reported at the start of this test run.
 
 ## LICENSE
 
