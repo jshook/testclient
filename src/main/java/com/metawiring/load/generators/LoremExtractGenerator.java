@@ -56,15 +56,10 @@ public class LoremExtractGenerator implements Generator<String> {
                 if (loremIpsumImage == null) {
                     CharBuffer image= loadLoremIpsum();
                     loremIpsumImage = image;
-
                 }
+                sizeDistribution = new UniformIntegerDistribution(rng, minsize, maxsize);
+                positionDistribution = new UniformIntegerDistribution(rng, 1, loremIpsumImage.limit() - maxsize);
             }
-        }
-
-        if (sizeDistribution==null)
-        {
-            sizeDistribution = new UniformIntegerDistribution(rng, minsize, maxsize);
-            positionDistribution = new UniformIntegerDistribution(rng, 1, loremIpsumImage.limit() - maxsize);
         }
 
         int offset = positionDistribution.sample();
