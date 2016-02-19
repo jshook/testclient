@@ -76,7 +76,7 @@ public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements Ac
                                         .put("epoch_hour", "DateSequenceFieldGenerator:1000:YYYY-MM-dd-HH")
                                         .put("param", "LineExtractGenerator:data/variable_words.txt")
                                         .put("ts", "DateSequenceGenerator:1000")
-                                        .put("data", "LoremExtractGenerator:100:200")
+                                        .put("data", "LoremExtractGenerator:1000:1000")
                                         .put("cycle", "CycleNumberGenerator")
                                         .build()
                         )
