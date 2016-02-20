@@ -2,12 +2,10 @@
 
 This project aims to provide a missing power tool in the test tooling arsenal.
 
-It doesn't aim to solve all problems for all people. What it aspires to do, it aspires to do very well.
+The design goals and rationale:
 
-The design goals are and rationale:
-
-1. Provide a useful and intuitive machine pattern for constructing and reasoning about concurrent performance tests. To encourage this, the core design elements  are [simple and tangible](docs/core_concepts.md).
-2. Enable direct construction of contextual workloads. If you have a data model, example statements, and some statistics about your data, you should be able to put these into a simple configuration and run your test. This is encouraged as TestClient's [primary usage pattern](https://github.com/jshook/testclient/blob/master/src/main/resources/activities/write-telemetry.yaml).
+1. Provide a useful and intuitive machine pattern for constructing and reasoning about concurrent performance tests. To encourage this, the core design elements  are [simple and tangible](doc/core_concepts.md).
+2. Enable direct construction of contextual workloads. If you have a data model, example statements, and some statistics about your data, you should be able to put these into a simple configuration and run your test. This is encouraged as TestClient's [primary usage pattern]( https://raw.githubusercontent.com/jshook/testclient/master/src/main/resources/activities/write-telemetry.yaml).
 3. Reduce testing time of complex scenarios with many variables. This is achieved by allowing tests to be dynamic within a scenario, supported by a scripting sandbox. This makes more sophisticated scenarios possible when needed.
 4. Minimize the amount of effort required to get results from a test cycle. This is simply a matter of using the best tooling available to bring data together in a common view. In other words, metrics and dashboards. TestClient supports reporting to common metrics systems out of the box.
 
