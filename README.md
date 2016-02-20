@@ -1,4 +1,4 @@
-## Empirical Machine
+## The Empirical Machine
 
 This project aims to provide a missing power tool in the test tooling arsenal.
 
