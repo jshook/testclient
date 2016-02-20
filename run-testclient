@@ -3,10 +3,21 @@
 export AUTO_INSTALL=${AUTO_INSTALL:-"true"}
 export FORCE_INSTALL=${FORCE_INSTALL:-"false"}
 export FETCH_ONLY=${FETCH_ONLY:-"false"}
+if ! which curl >> /dev/null 2>&1
+then
+ printf "$0 requires curl to be in the path.\n";
+ exit 2
+fi
 
 export TESTCLIENT_JARNAME="testclient.jar"
-export TESTCLIENT_RELEASE="latest-snapshot"
-export URL="https://github.com/jshook/testclient/releases/download/${TESTCLIENT_RELEASE}/${TESTCLIENT_JARNAME}"
+
+export browser_download_url=$(
+ curl -s -L \
+ 'https://api.github.com/repos/jshook/testclient/releases/latest' \
+ -H 'Accept: application/json' \
+ | grep 'browser_download_url' \
+ | cut -d'"' -f4
+)
 
 DOINSTALL="false"
 if [ ! -f "${TESTCLIENT_JARNAME}" -a "${AUTO_INSTALL}" = "true" ]
@@ -17,11 +28,10 @@ fi
 
 if [ "${DOINSTALL}" = "true" ]
 then
- printf 'fetching testclient from %s...\n' "${URL}" 1>&2
+ printf 'fetching testclient from %s...\n' "${browser_download_url}" 1>&2
  (
   cd /tmp ;
-  wget --quiet --no-check-certificate --no-cookies \
-  "${URL}"
+  curl -s -L -O "${browser_download_url}"
  )
  mv /tmp/testclient.jar ${TESTCLIENT_JARNAME}
  printf "The testclient jar has been saved as %s\n" ${TESTCLIENT_JARNAME}
