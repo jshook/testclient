@@ -1,19 +1,13 @@
 # Core Concepts
-TestClient is a machine pattern for test design and execution. This guide is intended to illustrate the moving parts and how they work together.
+TestClient is a machine pattern for test design and execution. This guide is intended to illustrate the moving parts and how they work together. As a whole, the function as control wiring for a set of inputs, actions on those inputs, and instrumentation to measure the result of those actions.
 
-## Elements
-The core of testclient functions as control wiring for a set of inputs, actions on those inputs, and instrumentation to measure the result of those actions.
-
-### Scenario
+## Scenario
 
 A runtime instance of testclient is called a Scenario. A scenario is the sandbox within which multiple activities run concurrently.
 
-### Activity
+## Activity
 
-An assembly of inputs, actions, and measurements is called an **Activity**. 
-
-(img)
-
+A runtime assembly of inputs, actions, and measurements is called an **Activity**. 
 
 The data flow between an input and an action is driven by a per-thread harness called a **Motor**. Motors iterate on the input, reading from it each cycle and passing it to the action. 
 
@@ -27,13 +21,13 @@ Activity Types are created by implementing the ActivityType interface. They are 
 
 Within a running scenario, running activities are known only by their aliases. That is, you must provide an alias when starting an activity.
 
-### Actions
-
-Actions are simply consumers of input values. The work done by actions represents the essential workload of a given test. Often, the action implementation is what makes an activity type interesting.
-
-### Inputs
+## Inputs
 
 For a given activity instance, there is usually a single input shared across all motors. This allows the input to be used for rate control within the activity. It also allows for all motors to draw from a single known set of cycle numbers. This is important for come activity types which use sliding-window or other sequence-dependent logic.
+
+## Actions
+
+Actions are simply consumers of input values. The work done by actions represents the essential workload of a given test. Often, the action implementation is what makes an activity type interesting.
 
 ### Controls
 
@@ -50,7 +44,7 @@ The format is simple:
 
 Activities may be controlled directly by JavaScript. Even when JavaScript isn't used directly by the user, it is still controlling the scenario. The script which is running the scenario is called the control script. For very basic tests, such as running a single workload against a target system, this may simply be a command to start the activity. For more complex scenarios, multiple activities may be started or stopped in various orders, with adjustments on the fly to controls such as thread count, delay settings, workload mix, etc.
 
-## Active Variables
+### Active Variables
 
 All of the controls mentioned in this documentation are provided to the scripting runtime as control variables. That means that as you modify their values, the testclient runtime is reacting to the changes. This allows you to create a test which is as simple or as sophisticated as needed. These variables are termed __Active Variables__, to call out the fact that they are directly bound to the behavior of the running scenario.
 
