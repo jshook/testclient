@@ -34,7 +34,9 @@ You can run an instance of an activity from the available types:
 
 You can run multiple activities:
 
-    ./run-testclient --activity alias=test1;type=diag;threads=10;interval=200; --activity alias=test2;type=diag;threads=1;interval=10;
+    ./run-testclient \
+    --activity alias=test1;type=diag;threads=10;interval=200; \
+    --activity alias=test2;type=diag;threads=1;interval=10;
     
 ## The Command Line
 
