@@ -3,10 +3,10 @@ package com.metawiring.load.cycler;
 import com.metawiring.load.cycler.api.ActivityAction;
 import com.metawiring.load.cycler.inputs.BlockingCycleValueSupplier;
 import com.metawiring.load.cycler.motors.ActivityMotor;
+import com.metawiring.load.cycler.motors.CoreActivityMotor;
 import org.testng.annotations.Test;
 
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,9 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ActivityMotorTest {
 
     @Test(enabled=false)
-    public void testBasicCycleMotor() {
+    public void testBasicActivityMotor() {
         BlockingCycleValueSupplier lockstepper = new BlockingCycleValueSupplier();
-        ActivityMotor cm = new ActivityMotor(5L,lockstepper);
+        ActivityMotor cm = new CoreActivityMotor(5L,lockstepper);
         AtomicLong observableAction = new AtomicLong(-3L);
         cm.setAction(getTestConsumer(observableAction));
         Thread t = new Thread(cm);

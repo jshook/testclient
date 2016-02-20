@@ -44,7 +44,6 @@ public class ActivityExecutor implements ParameterMap.Listener {
     private static final Logger logger = LoggerFactory.getLogger(ActivityExecutor.class);
 
     private ActivityDef activityDef;
-    private LongSupplier cycleSupplier;
 
     private ExecutorService executorService;
     private MotorDispenser activityMotorDispenser;
@@ -86,7 +85,7 @@ public class ActivityExecutor implements ParameterMap.Listener {
     private void adjustToActivityDef(ActivityDef activityDef) {
 
         Optional.ofNullable(activityMotorDispenser).orElseThrow(() ->
-        new RuntimeException("cycleMotorFactory is required"));
+        new RuntimeException("activityMotorFactory is required"));
 
         while (activityMotors.size() > activityDef.getThreads()) {
             ActivityMotor motor = activityMotors.get(activityMotors.size() - 1);

@@ -20,8 +20,7 @@ import com.metawiring.load.cycler.api.ActivityAction;
 import com.metawiring.load.cycler.api.ActivityInput;
 import com.metawiring.load.cycler.api.MotorDispenser;
 import com.metawiring.load.cycler.motors.ActivityMotor;
-
-import java.util.function.LongConsumer;
+import com.metawiring.load.cycler.motors.CoreActivityMotor;
 
 /**
  * Produce index ActivityMotor instances with an input and action,
@@ -40,7 +39,7 @@ public class CoreMotorDispenser implements MotorDispenser {
     @Override
     public ActivityMotor getMotor(ActivityDef activityDef, int motorId) {
         ActivityAction action = actionDispenser.getAction(motorId,activityDef);
-        ActivityMotor am = new ActivityMotor(motorId,input,action);
+        ActivityMotor am = new CoreActivityMotor(motorId,input,action);
         return am;
     }
 }

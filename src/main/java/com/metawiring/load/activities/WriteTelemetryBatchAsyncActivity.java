@@ -27,7 +27,8 @@ import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.collect.ImmutableMap;
 import com.metawiring.load.config.ActivityDef;
 import com.metawiring.load.config.StatementDef;
-import com.metawiring.load.core.ExecutionContext;
+import com.metawiring.load.core.MetricsContext;
+import com.metawiring.load.core.OldExecutionContext;
 import com.metawiring.load.core.ReadyStatements;
 import com.metawiring.load.generator.GeneratorBindingList;
 import com.metawiring.load.generator.ScopedCachingGeneratorSource;
@@ -45,7 +46,7 @@ import static com.codahale.metrics.MetricRegistry.name;
  * This should be written in more of a pipeline way, with consumer and producer pools, but not now.
  */
 @SuppressWarnings("ALL")
-public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext> {
+public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements ActivityContextAware<CQLActivityContext>, CanCreateSchema {
 
     private static Logger logger = LoggerFactory.getLogger(WriteTelemetryBatchAsyncActivity.class);
 
@@ -60,7 +61,7 @@ public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements Ac
     private BatchStatement.Type batchtype = BatchStatement.Type.valueOf(System.getProperty("batchtype","LOGGED"));
 
     @Override
-    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, ExecutionContext executionContext) {
+    public CQLActivityContext createContextToShare(ActivityDef def, ScopedCachingGeneratorSource genSource, OldExecutionContext executionContext) {
         CQLActivityContext activityContext = new CQLActivityContext(def, genSource, executionContext);
 
         List<StatementDef> statementDefs = new ArrayList<StatementDef>() {
@@ -134,15 +135,15 @@ public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements Ac
             createSchema();
         }
 
-        timerOps = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "ops-total"));
-        timerWaits = cqlSharedContext.getExecutionContext().getMetrics().timer(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "ops-wait"));
+        timerOps = MetricsContext.metrics().timer(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "ops-total"));
+        timerWaits = MetricsContext.metrics().timer(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "ops-wait"));
 
-        activityAsyncPendingCounter = cqlSharedContext.getExecutionContext().getMetrics().counter(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "async-pending"));
+        activityAsyncPendingCounter = MetricsContext.metrics().counter(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "async-pending"));
 
-        triesHistogram = cqlSharedContext.getExecutionContext().getMetrics().histogram(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "tries-histogram"));
+        triesHistogram = MetricsContext.metrics().histogram(name(WriteTelemetryBatchAsyncActivity.class.getSimpleName(), "tries-histogram"));
 
         // To populate the namespace
-        cqlSharedContext.getExecutionContext().getMetrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
+        MetricsContext.metrics().meter(name(getClass().getSimpleName(), "exceptions", "PlaceHolderException"));
 
 
 //        ReadyStatementsTemplate readyStatementsTemplate = cqlSharedContext.initReadyStatementsTemplate(statementDefs);
@@ -176,7 +177,7 @@ public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements Ac
         StatementDef tableStmt = new StatementDef("create-table", tableDDL, ImmutableMap.<String, String>builder().build());
 
         try {
-            cqlSharedContext.session.execute(keyspaceStmt.getCookedStatement(cqlSharedContext.getExecutionContext().getConfig()));
+            cqlSharedContext.session.execute(keyspaceStmt.getCookedStatement(cqlSharedContext.getActivityDef().getParams()));
             logger.info("Created keyspace " + cqlSharedContext.getExecutionContext().getConfig().keyspace);
         } catch (Exception e) {
             logger.error("Error while creating keyspace " + cqlSharedContext.getExecutionContext().getConfig().keyspace, e);
@@ -184,7 +185,7 @@ public class WriteTelemetryBatchAsyncActivity extends BaseActivity implements Ac
         }
 
         try {
-            cqlSharedContext.session.execute(tableStmt.getCookedStatement(cqlSharedContext.getExecutionContext().getConfig()));
+            cqlSharedContext.session.execute(tableStmt.getCookedStatement(cqlSharedContext.getActivityDef().getParams()));
             logger.info("Created table " + cqlSharedContext.getExecutionContext().getConfig().table);
         } catch (Exception e) {
             logger.error("Error while creating table " + cqlSharedContext.getExecutionContext().getConfig().table, e);

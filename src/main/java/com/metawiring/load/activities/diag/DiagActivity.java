@@ -59,9 +59,15 @@ public class DiagActivity implements ActivityType, ActivityInputDispenser, Motor
     }
 
     private MotorDispenser motorDispenser;
-
+    /**
+     * This motor dispenser method is redundant, but illustrative. It shows how to create the same
+     * type of motor that would be used even if DiagActivity didn't implement MotorDispenser.
+     * @param activityDef - The activity definition to be supported by the motor.
+     * @param motorId - The slot nuber of the motor.
+     * @return
+     */
     @Override
-    public synchronized ActivityMotor getMotor(ActivityDef activityDef, int motorId) {
+    public ActivityMotor getMotor(ActivityDef activityDef, int motorId) {
         if (motorDispenser == null) {
             synchronized (this) {
                 if (motorDispenser == null) {
@@ -71,7 +77,5 @@ public class DiagActivity implements ActivityType, ActivityInputDispenser, Motor
         }
         return motorDispenser.getMotor(activityDef, motorId);
     }
-
-
 
 }

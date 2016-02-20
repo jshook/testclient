@@ -21,5 +21,11 @@ import com.metawiring.load.cycler.motors.ActivityMotor;
  * Allow for custom activity motors to be provided.
  */
 public interface MotorDispenser {
+    /**
+     * Return an instance of an ActivityMotor, given the ActivityDef and the slot it will be assigned to.
+     * @param activityDef - The activity definition to be supported by the motor.
+     * @param motorId - The slot nuber of the motor.
+     * @return the motor instance
+     */
     ActivityMotor getMotor(ActivityDef activityDef, int motorId);
 }

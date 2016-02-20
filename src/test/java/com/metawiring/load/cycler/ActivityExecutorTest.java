@@ -6,11 +6,10 @@ import com.metawiring.load.cycler.api.ActivityInput;
 import com.metawiring.load.cycler.api.MotorDispenser;
 import com.metawiring.load.cycler.inputs.CycleSequenceSupplier;
 import com.metawiring.load.cycler.motors.ActivityMotor;
+import com.metawiring.load.cycler.motors.CoreActivityMotor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.Test;
-
-import java.util.function.LongConsumer;
 
 /*
 *   Copyright 2015 jshook
@@ -35,7 +34,7 @@ public class ActivityExecutorTest {
         ActivityDef ad = ActivityDef.parseActivityDef("alias=test");
         ActivityExecutor ae = new ActivityExecutor(ad);
         ActivityInput longSupplier = new CycleSequenceSupplier();
-        MotorDispenser cmf = getCycleMotorFactory(
+        MotorDispenser cmf = getActivityMotorFactory(
                 ad, motorActionDelay(999), longSupplier
         );
         ae.setActivityMotorDispenser(cmf);
@@ -57,11 +56,11 @@ public class ActivityExecutorTest {
 
     }
 
-    private MotorDispenser getCycleMotorFactory(final ActivityDef ad, ActivityAction lc, final ActivityInput ls) {
+    private MotorDispenser getActivityMotorFactory(final ActivityDef ad, ActivityAction lc, final ActivityInput ls) {
         MotorDispenser cmf = new MotorDispenser() {
             @Override
             public ActivityMotor getMotor(ActivityDef activityDef, int motorId) {
-                ActivityMotor cm = new ActivityMotor(motorId, ls);
+                ActivityMotor cm = new CoreActivityMotor(motorId, ls);
                 cm.setAction(lc);
                 return cm;
             }

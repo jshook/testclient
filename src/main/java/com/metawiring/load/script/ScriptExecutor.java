@@ -88,8 +88,8 @@ public class ScriptExecutor implements Runnable {
 
         for (String script : scripts) {
             try {
-                Object result = engine.eval("load('bin/sanitycheck.js');");
-//                Object result = engine.eval(script);
+//                Object result = engine.eval("load('bin/sanitycheck.js');");
+                Object result = engine.eval(script);
 
 //                logger.debug("engine eval result:" + result);
             } catch (ScriptException e) {
